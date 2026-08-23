@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.DS_Store
+
+# Dataset + generated artifacts are large binaries — regenerate locally with
+# scripts/extract_azsl_model.py rather than committing them.
+AzSLD_Fingerspelling.zip
+data/
+models/*.task
+# models/azsl_hierarchical_model.json is small (~470KB) and IS meant to be
+# committed so the frontend has a model to fetch without re-running extraction.

@@ -1,0 +1,1640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SIGNA — Real-Time Sign Translator</title>
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!-- Tailwind CDN -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!--
+  NOTE: MediaPipe Hands / Camera / Drawing-utils are intentionally NOT loaded
+  as static <script> tags here. They are fetched dynamically at runtime (see
+  the bottom script block) so that a slow, blocked, or offline CDN can never
+  delay or break the UI's own event-listener wiring below.
+-->
+
+<style>
+  :root{
+    --bg:            #08080b;
+    --panel:         #111116;
+    --panel-2:       #17171d;
+    --line:          #232329;
+    --teal:          #2dd4bf;
+    --teal-dim:      rgba(45,212,191,0.14);
+    --violet:        #8b5cf6;
+    --amber:         #fbbf24;
+    --rose:          #fb7185;
+    --text:          #f4f4f5;
+    --text-dim:      #8a8a94;
+  }
+
+  * { -webkit-font-smoothing: antialiased; }
+  body{
+    background: var(--bg);
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(45,212,191,0.08), transparent),
+      radial-gradient(ellipse 60% 40% at 100% 10%, rgba(139,92,246,0.06), transparent);
+    font-family: 'Inter', sans-serif;
+    color: var(--text);
+  }
+  .font-display{ font-family:'Space Grotesk', sans-serif; }
+  .font-mono{ font-family:'JetBrains Mono', monospace; }
+
+  .panel{
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+  }
+
+  @keyframes pulse-dot{
+    0%,100%{ box-shadow: 0 0 0 0 currentColor; opacity:1; }
+    70%{ box-shadow: 0 0 0 7px transparent; opacity:0.85; }
+  }
+  .dot-pulse{ animation: pulse-dot 1.8s ease-out infinite; }
+
+  @keyframes flash-commit{
+    0%{ box-shadow: 0 0 0 0 rgba(45,212,191,0.55) inset, 0 0 0 0 rgba(45,212,191,0.0); }
+    35%{ box-shadow: 0 0 0 0 rgba(45,212,191,0.0) inset, 0 0 55px 4px rgba(45,212,191,0.35); }
+    100%{ box-shadow: 0 0 0 0 rgba(45,212,191,0.0) inset, 0 0 0 0 rgba(45,212,191,0.0); }
+  }
+  .commit-flash{ animation: flash-commit 0.5s ease-out; }
+
+  @keyframes blink{ 0%,49%{ opacity:1;} 50%,100%{ opacity:0;} }
+  .cursor-blink{ animation: blink 1s step-end infinite; }
+
+  @keyframes spin-slow{ from{ transform: rotate(0deg);} to{ transform: rotate(360deg);} }
+  .spin-slow{ animation: spin-slow 12s linear infinite; }
+
+  @keyframes drawer-in{ from{ transform: translateX(100%);} to{ transform: translateX(0);} }
+  .drawer-in{ animation: drawer-in 0.25s cubic-bezier(0.16,1,0.3,1); }
+
+  @keyframes fade-in{ from{ opacity:0;} to{ opacity:1;} }
+  .fade-in{ animation: fade-in 0.2s ease-out; }
+
+  progress-ring circle{ transition: stroke-dashoffset 0.08s linear, stroke 0.2s ease; }
+
+  ::-webkit-scrollbar{ width:8px; height:8px; }
+  ::-webkit-scrollbar-thumb{ background:#2a2a32; border-radius:8px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+
+  @media (prefers-reduced-motion: reduce){
+    .dot-pulse, .commit-flash, .cursor-blink, .spin-slow, .drawer-in, .fade-in{ animation: none !important; }
+  }
+
+  .btn{
+    display:inline-flex; align-items:center; gap:0.5rem;
+    padding: 0.65rem 1rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border: 1px solid var(--line);
+    background: var(--panel-2);
+    color: var(--text);
+    transition: border-color .15s ease, background .15s ease, transform .1s ease;
+    white-space: nowrap;
+  }
+  .btn:hover{ border-color:#34343d; background:#1c1c23; }
+  .btn:active{ transform: scale(0.97); }
+  .btn-primary{
+    background: linear-gradient(135deg, rgba(45,212,191,0.16), rgba(139,92,246,0.10));
+    border-color: rgba(45,212,191,0.35);
+    color: var(--teal);
+  }
+  .btn-primary:hover{ border-color: rgba(45,212,191,0.6); background: linear-gradient(135deg, rgba(45,212,191,0.24), rgba(139,92,246,0.14)); }
+
+  .chip{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:600;
+    font-size:0.95rem;
+    padding: 0.15rem 0.55rem;
+    border-radius: 8px;
+    background: var(--teal-dim);
+    border: 1px solid rgba(45,212,191,0.25);
+    color: var(--teal);
+  }
+
+  .switch{ width:40px; height:22px; border-radius:999px; background:#232329; position:relative; transition:background .2s ease; flex-shrink:0; cursor:pointer; }
+  .switch::after{ content:''; position:absolute; top:2px; left:2px; width:18px; height:18px; border-radius:999px; background:#8a8a94; transition: transform .2s ease, background .2s ease; }
+  .switch.on{ background: rgba(45,212,191,0.25); }
+  .switch.on::after{ transform: translateX(18px); background: var(--teal); }
+
+  .history-item{
+    display:flex; align-items:flex-start; gap:0.75rem;
+    padding: 0.85rem 0.9rem;
+    border: 1px solid var(--line);
+    background: var(--panel-2);
+    border-radius: 12px;
+  }
+  .history-icon-btn{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:26px; height:26px; border-radius:8px;
+    border:1px solid var(--line); background:transparent; color:var(--text-dim);
+    transition: border-color .15s ease, color .15s ease, background .15s ease;
+  }
+  .history-icon-btn:hover{ border-color:#34343d; color:var(--text); background:#1c1c23; }
+  .history-icon-btn-danger:hover{ border-color: rgba(251,113,133,0.5); color: var(--rose); }
+
+  .alphabet-cell{
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;
+    aspect-ratio:1; border-radius:12px; border:1px solid var(--line); background:var(--panel-2);
+    font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:1.25rem; color:var(--text-dim);
+    transition: border-color .15s ease, color .15s ease, background .15s ease;
+  }
+  .alphabet-cell.trained{ color:var(--teal); border-color:rgba(45,212,191,0.3); background:var(--teal-dim); }
+  .alphabet-cell .dot{ width:5px; height:5px; border-radius:999px; background:currentColor; opacity:0.6; }
+
+  /* Toast — always present in the DOM, visibility purely via opacity so the
+     transition can animate (avoids Tailwind's display:none `.hidden`). */
+  #toast{
+    position:fixed; left:50%; bottom:28px; z-index:200;
+    transform:translateX(-50%) translateY(10px);
+    display:flex; align-items:center; gap:8px;
+    background:#17171d; border:1px solid #2a2a32; color:#f4f4f5;
+    font-family:'JetBrains Mono', monospace; font-size:12px;
+    padding:10px 16px; border-radius:999px;
+    opacity:0; pointer-events:none;
+    transition: opacity .2s ease, transform .2s ease;
+  }
+  #toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+
+<body class="min-h-screen">
+
+  <div class="max-w-7xl mx-auto px-5 py-6 lg:py-8">
+
+    <!-- ============ HEADER ============ -->
+    <header class="flex items-center justify-between mb-6">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-teal-400/20 to-violet-500/20 border border-teal-400/30 flex items-center justify-center">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2dd4bf" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"></path>
+            <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"></path>
+            <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"></path>
+            <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-6.29-3.34l-3.6-5.19a2 2 0 0 1 3.16-2.43L8 13"></path>
+          </svg>
+        </div>
+        <div>
+          <h1 class="font-display text-lg font-700 tracking-tight leading-none">SIGNA</h1>
+          <p class="text-[11px] text-[var(--text-dim)] font-mono tracking-wide">REAL-TIME FINGERSPELLING ENGINE</p>
+        </div>
+      </div>
+      <div class="hidden sm:flex items-center gap-2 font-mono text-[11px] text-[var(--text-dim)] border border-[var(--line)] rounded-full px-3 py-1.5">
+        <span class="w-1.5 h-1.5 rounded-full bg-teal-400 dot-pulse text-teal-400"></span>
+        CLIENT-SIDE · NO SERVER · NO DATA LEAVES BROWSER
+      </div>
+    </header>
+
+    <!-- ============ MAIN GRID ============ -->
+    <main class="grid grid-cols-1 lg:grid-cols-[1.15fr_1fr] gap-6">
+
+      <!-- ================= LEFT: CAMERA PANEL ================= -->
+      <section class="panel p-4 flex flex-col">
+        <div class="flex items-center justify-between mb-3 px-1">
+          <h2 class="font-display text-sm font-600 text-[var(--text-dim)] tracking-wide">LIVE FEED</h2>
+          <div id="handStatusBadge" class="flex items-center gap-2 font-mono text-[11px] px-2.5 py-1 rounded-full border border-[var(--line)] bg-[var(--panel-2)]">
+            <span id="handStatusDot" class="w-1.5 h-1.5 rounded-full bg-amber-400 dot-pulse text-amber-400"></span>
+            <span id="handStatusText" class="text-[var(--text-dim)]">SEARCHING…</span>
+          </div>
+        </div>
+
+        <div class="relative rounded-2xl overflow-hidden border border-[var(--line)] bg-black" style="aspect-ratio:16/9;">
+          <video id="inputVideo" class="absolute inset-0 w-full h-full object-cover" style="transform:scaleX(-1);" playsinline autoplay muted></video>
+          <canvas id="overlayCanvas" class="absolute inset-0 w-full h-full" style="transform:scaleX(-1);"></canvas>
+
+          <!-- loading state -->
+          <div id="loadingOverlay" class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/80 backdrop-blur-sm">
+            <div class="w-8 h-8 border-2 border-teal-400/30 border-t-teal-400 rounded-full animate-spin"></div>
+            <p class="font-mono text-xs text-[var(--text-dim)]" id="loadingText">Initializing camera…</p>
+          </div>
+
+          <!-- camera-offline / error state -->
+          <div id="errorOverlay" class="hidden absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/90 text-center px-8">
+            <p class="font-display text-sm font-600 text-rose-400" id="errorTitle">Camera Offline</p>
+            <p class="font-mono text-[11px] text-[var(--text-dim)] max-w-xs leading-relaxed" id="errorText">Click Demo Toggle to preview.</p>
+            <button id="btnEnableDemoFromOverlay" class="btn btn-primary mt-1">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+              Enable Demo Mode
+            </button>
+          </div>
+
+          <!-- demo mode banner -->
+          <div id="demoBanner" class="hidden absolute top-3 left-3 font-mono text-[10px] tracking-wide px-2.5 py-1 rounded-full bg-amber-400/15 border border-amber-400/40 text-amber-300">
+            ◆ DEMO AUTO-TYPE ACTIVE — CAMERA INPUT PAUSED
+          </div>
+
+          <!-- FPS -->
+          <div class="absolute top-3 right-3 font-mono text-[11px] px-2.5 py-1 rounded-full bg-black/50 border border-white/10 backdrop-blur-sm">
+            <span class="text-[var(--text-dim)]">FPS</span>
+            <span id="fpsCounter" class="text-teal-400 ml-1">0</span>
+          </div>
+        </div>
+
+        <p class="mt-3 px-1 text-[11px] font-mono text-[var(--text-dim)] leading-relaxed">
+          Full Azerbaijani fingerspelling alphabet (32 letters) matched against trained landmark prototypes ·
+          <span class="text-zinc-300">SPACE</span> thumbs up ·
+          <span class="text-zinc-300">DEL</span> pointing index.
+          Hold steady for 1.2s to commit.
+        </p>
+        <p class="mt-1.5 px-1 text-[11px] font-mono text-[var(--text-dim)]" id="modelStatus">
+          AzSL model: <span class="text-amber-300">loading…</span>
+        </p>
+      </section>
+
+      <!-- ================= RIGHT: TRANSLATION PANEL ================= -->
+      <section class="flex flex-col gap-6">
+
+        <!-- Live Translation Card -->
+        <div id="letterCard" class="panel p-6 flex items-center gap-6">
+          <div class="relative w-28 h-28 flex-shrink-0 flex items-center justify-center">
+            <div class="absolute inset-0 rounded-full border border-[var(--line)] spin-slow" style="border-style:dashed; opacity:0.35;"></div>
+            <svg width="112" height="112" viewBox="0 0 112 112" class="-rotate-90">
+              <circle cx="56" cy="56" r="50" fill="none" stroke="#1c1c23" stroke-width="6"></circle>
+              <circle id="progressRing" cx="56" cy="56" r="50" fill="none" stroke="#2dd4bf" stroke-width="6" stroke-linecap="round"></circle>
+            </svg>
+            <span id="liveLetter" class="font-display absolute text-4xl font-700">–</span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="font-mono text-[11px] text-[var(--text-dim)] tracking-wide mb-1">ACTIVE PREDICTION</p>
+            <p id="predictionLabel" class="font-display text-xl font-600 mb-2 truncate">Awaiting gesture…</p>
+            <div class="w-full h-1.5 bg-[var(--panel-2)] rounded-full overflow-hidden mb-2">
+              <div id="confidenceBar" class="h-full bg-gradient-to-r from-teal-400 to-violet-400" style="width:0%"></div>
+            </div>
+            <p class="font-mono text-[11px] text-[var(--text-dim)]">CONFIDENCE <span id="confidenceValue" class="text-teal-400">0%</span></p>
+            <p id="secondCandidate" class="font-mono text-[10px] text-[var(--text-dim)] mt-1 truncate">&nbsp;</p>
+          </div>
+        </div>
+
+        <!-- Sentence Builder -->
+        <div class="panel p-5 flex-1 flex flex-col">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="font-display text-sm font-600 text-[var(--text-dim)] tracking-wide">SENTENCE BUILDER</h2>
+            <span id="charCount" class="font-mono text-[11px] text-[var(--text-dim)]">0 chars</span>
+          </div>
+
+          <div class="mb-3">
+            <p class="font-mono text-[10px] text-[var(--text-dim)] mb-1.5 tracking-wide">CURRENT WORD</p>
+            <div id="currentWordChips" class="flex flex-wrap gap-1.5 min-h-[2.25rem] items-center">
+              <span class="text-[var(--text-dim)] text-sm font-mono">—</span>
+            </div>
+          </div>
+
+          <div class="flex-1 flex flex-col">
+            <p class="font-mono text-[10px] text-[var(--text-dim)] mb-1.5 tracking-wide">SENTENCE</p>
+            <div class="panel !bg-[var(--panel-2)] !rounded-xl p-4 flex-1 min-h-[110px]">
+              <p id="sentenceOutput" class="font-mono text-[15px] leading-relaxed text-zinc-100 break-words">
+                <span class="text-[var(--text-dim)]">Start signing to build your sentence…</span><span class="cursor-blink text-teal-400">▍</span>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="panel p-4">
+          <div class="grid grid-cols-2 gap-2 mb-3">
+            <button id="btnCopy" class="btn btn-primary justify-center">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              Copy Text
+            </button>
+            <button id="btnSpeak" class="btn justify-center">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.5 8.5a5 5 0 0 1 0 7"></path><path d="M18 6a9 9 0 0 1 0 12"></path></svg>
+              Read Aloud
+            </button>
+            <button id="btnHistory" class="btn justify-center">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v5h5"></path><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"></path><path d="M12 7v5l4 2"></path></svg>
+              Session History
+            </button>
+            <button id="btnAlphabet" class="btn justify-center">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+              Alphabet Reference
+            </button>
+            <button id="btnClear" class="btn justify-center col-span-2">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg>
+              Clear Sentence
+            </button>
+          </div>
+
+          <div class="flex items-center justify-between pt-3 border-t border-[var(--line)]">
+            <div>
+              <p class="font-display text-sm font-600">Demo Auto-Type Mode</p>
+              <p class="font-mono text-[10px] text-[var(--text-dim)]">Simulate gestures — works with zero camera access</p>
+            </div>
+            <button id="demoToggle" class="switch" role="switch" aria-checked="false" aria-label="Toggle demo auto-type mode"></button>
+          </div>
+        </div>
+
+        <p class="text-center font-mono text-[10px] text-[var(--text-dim)]">
+          Shortcuts — <kbd class="text-zinc-300">Space</kbd> force space ·
+          <kbd class="text-zinc-300">Backspace</kbd> delete ·
+          <kbd class="text-zinc-300">Esc</kbd> clear ·
+          <kbd class="text-zinc-300">S</kbd> speak
+        </p>
+
+      </section>
+    </main>
+
+    <footer class="mt-6 text-center font-mono text-[10px] text-[var(--text-dim)]">
+      MediaPipe Hands · Azerbaijani alphabet nearest-centroid classifier · runs 100% in your browser
+    </footer>
+  </div>
+
+  <!-- ============ SESSION HISTORY DRAWER ============ -->
+  <div id="historyOverlay" class="hidden fixed inset-0 z-50">
+    <div id="historyBackdrop" class="absolute inset-0 bg-black/60 backdrop-blur-sm fade-in"></div>
+    <aside class="drawer-in absolute top-0 right-0 h-full w-full max-w-md panel !rounded-none !border-l !border-t-0 !border-b-0 !border-r-0 flex flex-col">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-[var(--line)]">
+        <div>
+          <h2 class="font-display text-base font-700">Session History</h2>
+          <p class="text-[11px] font-mono text-[var(--text-dim)]">Saved locally in your browser</p>
+        </div>
+        <button id="historyCloseBtn" class="history-icon-btn" style="width:32px;height:32px;" aria-label="Close history">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-2.5">
+        <p id="historyEmpty" class="text-[13px] font-mono text-[var(--text-dim)] text-center mt-8">
+          No saved sentences yet. Clearing a sentence saves it here.
+        </p>
+        <div id="historyList" class="flex flex-col gap-2.5"></div>
+      </div>
+
+      <div class="px-5 py-4 border-t border-[var(--line)] grid grid-cols-2 gap-2">
+        <button id="historyDownloadAllBtn" class="btn justify-center">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          Download All
+        </button>
+        <button id="historyClearBtn" class="btn justify-center">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path></svg>
+          Clear History
+        </button>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ============ AZERBAIJANI ALPHABET REFERENCE DRAWER ============ -->
+  <div id="alphabetOverlay" class="hidden fixed inset-0 z-50">
+    <div id="alphabetBackdrop" class="absolute inset-0 bg-black/60 backdrop-blur-sm fade-in"></div>
+    <aside class="drawer-in absolute top-0 right-0 h-full w-full max-w-md panel !rounded-none !border-l !border-t-0 !border-b-0 !border-r-0 flex flex-col">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-[var(--line)]">
+        <div>
+          <h2 class="font-display text-base font-700">Azerbaijani Alphabet</h2>
+          <p class="text-[11px] font-mono text-[var(--text-dim)]" id="alphabetSubtitle">Loading model coverage…</p>
+        </div>
+        <button id="alphabetCloseBtn" class="history-icon-btn" style="width:32px;height:32px;" aria-label="Close alphabet reference">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto px-5 py-4">
+        <div id="alphabetGrid" class="grid grid-cols-4 sm:grid-cols-6 gap-2"></div>
+        <div class="flex items-center gap-4 mt-4 pt-4 border-t border-[var(--line)] text-[11px] font-mono text-[var(--text-dim)]">
+          <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-teal-400 inline-block"></span> Trained</span>
+          <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[var(--line)] inline-block"></span> Unavailable</span>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <div id="toast" role="status" aria-live="polite">Copied!</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ==========================================================================
+  // PURE GESTURE ENGINE — no DOM access, cannot throw due to missing elements,
+  // safe to define unconditionally at parse time.
+  // ==========================================================================
+  const LM = {
+    WRIST: 0,
+    THUMB_MCP: 2, THUMB_IP: 3, THUMB_TIP: 4,
+    INDEX_MCP: 5, INDEX_PIP: 6, INDEX_TIP: 8,
+    MIDDLE_MCP: 9, MIDDLE_PIP: 10, MIDDLE_TIP: 12,
+    RING_MCP: 13, RING_PIP: 14, RING_TIP: 16,
+    PINKY_MCP: 17, PINKY_PIP: 18, PINKY_TIP: 20,
+  };
+
+  // Per-finger (base, j1, j2, tip) landmark quadruples — thumb, index, middle,
+  // ring, pinky, in this fixed order. Must match FINGERS in
+  // scripts/extract_azsl_model.py exactly so the 15 joint-angle features line
+  // up between the trained model and live inference.
+  const FINGERS = [
+    { base: LM.WRIST, j1: LM.THUMB_MCP, j2: LM.THUMB_IP, tip: LM.THUMB_TIP },
+    { base: LM.WRIST, j1: LM.INDEX_MCP, j2: LM.INDEX_PIP, tip: LM.INDEX_TIP },
+    { base: LM.WRIST, j1: LM.MIDDLE_MCP, j2: LM.MIDDLE_PIP, tip: LM.MIDDLE_TIP },
+    { base: LM.WRIST, j1: LM.RING_MCP, j2: LM.RING_PIP, tip: LM.RING_TIP },
+    { base: LM.WRIST, j1: LM.PINKY_MCP, j2: LM.PINKY_PIP, tip: LM.PINKY_TIP },
+  ];
+  const TIP_PAIRS = [
+    [LM.THUMB_TIP, LM.INDEX_TIP], [LM.INDEX_TIP, LM.MIDDLE_TIP],
+    [LM.MIDDLE_TIP, LM.RING_TIP], [LM.RING_TIP, LM.PINKY_TIP],
+  ];
+
+  // Canonical Azerbaijani Latin alphabet (32 letters) — same order used by
+  // scripts/extract_azsl_model.py and the alphabet reference drawer.
+  const AZ_ALPHABET = [
+    'A', 'B', 'C', 'Ç', 'D', 'E', 'Ə', 'F', 'G', 'Ğ', 'H', 'X', 'I', 'İ',
+    'J', 'K', 'Q', 'L', 'M', 'N', 'O', 'Ö', 'P', 'R', 'S', 'Ş', 'T', 'U',
+    'Ü', 'V', 'Y', 'Z',
+  ];
+
+  const LABELS = { SPACE: 'SPACE', DEL: 'DEL' };
+
+  const CONTROL_LABEL_META = {
+    SPACE: { friendly: 'SPACE',  symbol: '␣' },
+    DEL:   { friendly: 'DELETE', symbol: '⌫' },
+  };
+
+  function labelMeta(label) {
+    return CONTROL_LABEL_META[label] || { friendly: label, symbol: label };
+  }
+
+  const MIN_CONFIDENCE = 0.55;
+  const HEURISTIC_CONF = 0.92;
+  const ANGLE_STRAIGHT = 155; // finger joint angle (deg) considered "extended"
+  const ANGLE_FIST = 100;     // finger joint angle (deg) considered "curled"
+
+  function vecSub(a, b) { return { x: a.x - b.x, y: a.y - b.y, z: a.z - b.z }; }
+  function vecMag(v) { return Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z); }
+  function vecDist(a, b) { return vecMag(vecSub(a, b)); }
+
+  function angleBetween(v1, v2) {
+    const mags = vecMag(v1) * vecMag(v2) || 1e-6;
+    const cos = Math.min(1, Math.max(-1, (v1.x * v2.x + v1.y * v2.y + v1.z * v2.z) / mags));
+    return Math.acos(cos) * (180 / Math.PI);
+  }
+
+  function jointAngleDeg(coords, mcpIdx, pipIdx, tipIdx) {
+    const toMcp = vecSub(coords[mcpIdx], coords[pipIdx]);
+    const toTip = vecSub(coords[tipIdx], coords[pipIdx]);
+    return angleBetween(toMcp, toTip);
+  }
+
+  // Wrist-origin, scale-normalized, then mirrored to a canonical "Right hand"
+  // orientation for left-hand detections — must match normalize_landmarks()
+  // in scripts/extract_azsl_model.py exactly (same order of operations).
+  function normalizeLandmarks(landmarks, mirrorX) {
+    const wrist = landmarks[LM.WRIST];
+    const shifted = landmarks.map((p) => vecSub(p, wrist));
+    let scale = vecMag(shifted[LM.MIDDLE_MCP]);
+    if (scale < 1e-6) scale = 1e-6;
+    const normalized = shifted.map((p) => ({ x: p.x / scale, y: p.y / scale, z: p.z / scale }));
+    if (mirrorX) normalized.forEach((p) => { p.x = -p.x; });
+    return normalized;
+  }
+
+  function LandmarkSmoother(alpha) {
+    this.alpha = alpha || 0.4;
+    this.smoothed = null;
+  }
+  LandmarkSmoother.prototype.reset = function () { this.smoothed = null; };
+  LandmarkSmoother.prototype.update = function (landmarks) {
+    if (!this.smoothed) {
+      this.smoothed = landmarks.map((p) => ({ x: p.x, y: p.y, z: p.z }));
+      return this.smoothed;
+    }
+    const a = this.alpha;
+    this.smoothed = landmarks.map((p, i) => ({
+      x: a * p.x + (1 - a) * this.smoothed[i].x,
+      y: a * p.y + (1 - a) * this.smoothed[i].y,
+      z: a * p.z + (1 - a) * this.smoothed[i].z,
+    }));
+    return this.smoothed;
+  };
+
+  // 10-frame sliding ring buffer over RAW (pre-normalization) wrist position,
+  // used to estimate motion for the dynamic letters (Ç,D,G,K,Ö,Ü,Y,Z were the
+  // ones with genuine multi-frame burst data during training — see
+  // scripts/extract_azsl_model.py). Velocity is expressed as "position change
+  // per processed frame" to match how training-time velocity was computed
+  // (position delta / frame-number gap) — see that script's docstring for why
+  // frame-index units, not wall-clock seconds, are used on both sides.
+  function MotionBuffer(size) {
+    this.size = size || 10;
+    this.buffer = [];
+  }
+  MotionBuffer.prototype.reset = function () { this.buffer = []; };
+  MotionBuffer.prototype.velocityAndPush = function (x, y) {
+    let vx = 0, vy = 0;
+    if (this.buffer.length) {
+      const oldest = this.buffer[0];
+      const span = this.buffer.length;
+      vx = (x - oldest.x) / span;
+      vy = (y - oldest.y) / span;
+    }
+    this.buffer.push({ x: x, y: y });
+    if (this.buffer.length > this.size) this.buffer.shift();
+    return { x: vx, y: vy };
+  };
+
+  function fingerState(coords, mcpIdx, pipIdx, tipIdx) {
+    const angle = jointAngleDeg(coords, mcpIdx, pipIdx, tipIdx);
+    if (angle >= ANGLE_STRAIGHT) return 'extended';
+    if (angle <= ANGLE_FIST) return 'curled';
+    return 'mid';
+  }
+
+  function thumbExtended(coords, margin) {
+    margin = margin || 1.15;
+    const tipToPinky = vecDist(coords[LM.THUMB_TIP], coords[LM.PINKY_MCP]);
+    const mcpToPinky = vecDist(coords[LM.THUMB_MCP], coords[LM.PINKY_MCP]);
+    return tipToPinky > mcpToPinky * margin;
+  }
+
+  function thumbPointingUp(coords, threshold) {
+    threshold = threshold || 0.15;
+    return coords[LM.THUMB_TIP].y < coords[LM.THUMB_MCP].y - threshold &&
+           coords[LM.THUMB_TIP].y < -threshold;
+  }
+
+  function gestureResult(label) { return { label: label, confidence: HEURISTIC_CONF }; }
+
+  // The dataset only contains the 32 alphabet letters — there is no trained
+  // gesture for SPACE/DEL, so those two stay simple geometric heuristics
+  // layered on top of the trained hierarchical letter classifier below. Both
+  // checks are built from distances/angles, which are mirror-invariant, so
+  // they need no handedness correction.
+  function detectControlGesture(coords) {
+    const fs = {
+      index: fingerState(coords, LM.INDEX_MCP, LM.INDEX_PIP, LM.INDEX_TIP),
+      middle: fingerState(coords, LM.MIDDLE_MCP, LM.MIDDLE_PIP, LM.MIDDLE_TIP),
+      ring: fingerState(coords, LM.RING_MCP, LM.RING_PIP, LM.RING_TIP),
+      pinky: fingerState(coords, LM.PINKY_MCP, LM.PINKY_PIP, LM.PINKY_TIP),
+    };
+    const thumbOut = thumbExtended(coords);
+    const thumbUp = thumbPointingUp(coords);
+    const allCurled = fs.index === 'curled' && fs.middle === 'curled' && fs.ring === 'curled' && fs.pinky === 'curled';
+
+    if (thumbOut && thumbUp && allCurled) return gestureResult(LABELS.SPACE);
+
+    // The angle-based "curled" check alone false-fires on some open-palm 'B'
+    // shapes (real dataset variation, discovered via scripts validation —
+    // moderately bent fingers at some capture angles still read as
+    // "curled"). Require the index tip to be CLEARLY the farthest fingertip
+    // from the wrist, which a genuine one-finger point has and an open palm
+    // does not, as a second independent confirmation.
+    const indexDist = vecMag(coords[LM.INDEX_TIP]);
+    const indexClearlyFarthest =
+      indexDist > vecMag(coords[LM.MIDDLE_TIP]) * 1.2 &&
+      indexDist > vecMag(coords[LM.RING_TIP]) * 1.3 &&
+      indexDist > vecMag(coords[LM.PINKY_TIP]) * 1.4;
+
+    if (!thumbOut && fs.index === 'extended' && fs.middle === 'curled' &&
+        fs.ring === 'curled' && fs.pinky === 'curled' && indexClearlyFarthest) {
+      return gestureResult(LABELS.DEL);
+    }
+    return null;
+  }
+
+  // ------------------------------------------------------------------ //
+  // Two-level hierarchical classifier against models/azsl_hierarchical_model.json
+  // (Level 1: 6-way confusion-cluster dispatcher MLP. Level 2: one
+  // specialized MLP per cluster — see scripts/extract_azsl_model.py for how
+  // these were trained and exported; the JS below just replays their forward
+  // pass, since no ML library is loaded in the browser).
+  // ------------------------------------------------------------------ //
+  let AZSL_MODEL = null;
+
+  function jointAngles15(coords) {
+    const out = new Array(15);
+    const middleDir = vecSub(coords[LM.MIDDLE_PIP], coords[LM.MIDDLE_MCP]);
+    for (let i = 0; i < FINGERS.length; i++) {
+      const f = FINGERS[i];
+      const baseFlex = angleBetween(vecSub(coords[f.base], coords[f.j1]), vecSub(coords[f.j2], coords[f.j1]));
+      const tipFlex = angleBetween(vecSub(coords[f.j1], coords[f.j2]), vecSub(coords[f.tip], coords[f.j2]));
+      const thisDir = vecSub(coords[f.j2], coords[f.j1]);
+      const spread = angleBetween(thisDir, middleDir);
+      out[i * 3] = baseFlex; out[i * 3 + 1] = tipFlex; out[i * 3 + 2] = spread;
+    }
+    return out;
+  }
+
+  function tipDistances4(coords) {
+    return TIP_PAIRS.map((pair) => vecDist(coords[pair[0]], coords[pair[1]]));
+  }
+
+  // 84-dim: [63 normalized coords][15 joint angles][4 tip distances][2 velocity].
+  // Must match build_feature_vector() in scripts/extract_azsl_model.py exactly.
+  function buildFeatureVector84(coords, velocity) {
+    const out = new Array(84);
+    let k = 0;
+    for (let i = 0; i < coords.length; i++) { out[k++] = coords[i].x; out[k++] = coords[i].y; out[k++] = coords[i].z; }
+    const angles = jointAngles15(coords);
+    for (let i = 0; i < angles.length; i++) out[k++] = angles[i];
+    const dists = tipDistances4(coords);
+    for (let i = 0; i < dists.length; i++) out[k++] = dists[i];
+    out[k++] = velocity.x; out[k++] = velocity.y;
+    return out;
+  }
+
+  function applyScaler(vec, scaler) {
+    const out = new Array(vec.length);
+    for (let i = 0; i < vec.length; i++) {
+      const std = scaler.std[i] > 1e-9 ? scaler.std[i] : 1e-9;
+      out[i] = (vec[i] - scaler.mean[i]) / std;
+    }
+    return out;
+  }
+
+  // Replays a trained sklearn MLPClassifier: dense layers with ReLU hidden
+  // activation, softmax (multi-class) or sigmoid (sklearn's collapsed binary
+  // case, re-expanded here into two explicit class probabilities) output.
+  // Returns candidates sorted by confidence, highest first.
+  function mlpForward(model, inputVec) {
+    let activation = inputVec;
+    for (let li = 0; li < model.layers.length; li++) {
+      const layer = model.layers[li];
+      const isOutputLayer = li === model.layers.length - 1;
+      const out = new Array(layer.biases.length);
+      for (let j = 0; j < layer.biases.length; j++) {
+        let sum = layer.biases[j];
+        for (let i = 0; i < activation.length; i++) sum += activation[i] * layer.weights[i][j];
+        out[j] = sum;
+      }
+      if (!isOutputLayer) {
+        for (let j = 0; j < out.length; j++) out[j] = Math.max(0, out[j]); // ReLU
+      }
+      activation = out;
+    }
+
+    let candidates;
+    if (model.outputActivation === 'sigmoid_binary') {
+      const p1 = 1 / (1 + Math.exp(-activation[0]));
+      candidates = [
+        { label: model.classes[0], confidence: 1 - p1 },
+        { label: model.classes[1], confidence: p1 },
+      ];
+    } else {
+      const maxLogit = Math.max.apply(null, activation);
+      const exps = activation.map((v) => Math.exp(v - maxLogit));
+      const sumExp = exps.reduce((a, b) => a + b, 0) || 1e-9;
+      candidates = model.classes.map((label, i) => ({ label: label, confidence: exps[i] / sumExp }));
+    }
+    candidates.sort((a, b) => b.confidence - a.confidence);
+    return candidates;
+  }
+
+  function classifyHierarchical(coords, velocity) {
+    if (!AZSL_MODEL) return { label: null, confidence: 0, candidates: [] };
+
+    const full84 = buildFeatureVector84(coords, velocity);
+    const clusterCandidates = mlpForward(AZSL_MODEL.level1.model, applyScaler(full84, AZSL_MODEL.level1.scaler));
+    const clusterEntry = AZSL_MODEL.clusters[String(clusterCandidates[0].label)];
+    if (!clusterEntry) return { label: null, confidence: 0, candidates: [] };
+
+    const subInput = clusterEntry.featureIndices.length === full84.length
+      ? full84
+      : clusterEntry.featureIndices.map((idx) => full84[idx]);
+    const letterCandidates = mlpForward(clusterEntry.model, applyScaler(subInput, clusterEntry.scaler));
+
+    return { label: letterCandidates[0].label, confidence: letterCandidates[0].confidence, candidates: letterCandidates.slice(0, 2) };
+  }
+
+  // SPACE/DEL have no trained representation (dataset = 32 letters only) and
+  // their handshapes were borrowed from English ASL with no linguistic
+  // connection to AzSL — testing against real dataset images showed AzSL's
+  // actual "B" naturally has index/other-finger proportions that can trigger
+  // the "index-only-extended" DEL heuristic. So the trained classifier goes
+  // FIRST: only fall back to the geometric heuristic when the trained model
+  // itself isn't confident about any letter — data wins over guesswork.
+  const CONTROL_OVERRIDE_CONFIDENCE = 0.75;
+
+  function predictGesture(landmarksArray, mirrorX, velocity) {
+    const coords = normalizeLandmarks(landmarksArray, mirrorX);
+    const v = mirrorX ? { x: -velocity.x, y: velocity.y } : velocity;
+    const letterResult = classifyHierarchical(coords, v);
+
+    if (letterResult.confidence >= CONTROL_OVERRIDE_CONFIDENCE) return letterResult;
+
+    const control = detectControlGesture(coords);
+    if (control) return { label: control.label, confidence: control.confidence, candidates: [control] };
+
+    if (letterResult.confidence >= MIN_CONFIDENCE) return letterResult;
+    return { label: null, confidence: letterResult.confidence, candidates: [] };
+  }
+
+  // ==========================================================================
+  // APP BOOTSTRAP — everything DOM-related lives here, wired the instant the
+  // document is ready. Nothing in this block depends on MediaPipe or camera
+  // state, so every button works even if the camera never initializes.
+  // ==========================================================================
+  document.addEventListener('DOMContentLoaded', function () {
+
+    const $ = function (id) { return document.getElementById(id); };
+
+    // ---- DOM refs ----
+    const videoEl = $('inputVideo');
+    const canvasEl = $('overlayCanvas');
+    const canvasCtx = canvasEl.getContext('2d');
+    const loadingOverlay = $('loadingOverlay');
+    const errorOverlay = $('errorOverlay');
+    const errorTitle = $('errorTitle');
+    const errorText = $('errorText');
+    const demoBanner = $('demoBanner');
+    const fpsCounterEl = $('fpsCounter');
+
+    const handStatusDot = $('handStatusDot');
+    const handStatusText = $('handStatusText');
+
+    const letterCard = $('letterCard');
+    const liveLetterEl = $('liveLetter');
+    const predictionLabel = $('predictionLabel');
+    const progressRing = $('progressRing');
+    const confidenceBar = $('confidenceBar');
+    const confidenceValue = $('confidenceValue');
+    const secondCandidateEl = $('secondCandidate');
+
+    const currentWordChips = $('currentWordChips');
+    const sentenceOutput = $('sentenceOutput');
+    const charCount = $('charCount');
+
+    const btnCopy = $('btnCopy');
+    const btnSpeak = $('btnSpeak');
+    const btnClear = $('btnClear');
+    const btnHistory = $('btnHistory');
+    const btnEnableDemoFromOverlay = $('btnEnableDemoFromOverlay');
+    const demoToggle = $('demoToggle');
+
+    const historyOverlay = $('historyOverlay');
+    const historyBackdrop = $('historyBackdrop');
+    const historyCloseBtn = $('historyCloseBtn');
+    const historyClearBtn = $('historyClearBtn');
+    const historyDownloadAllBtn = $('historyDownloadAllBtn');
+    const historyList = $('historyList');
+    const historyEmpty = $('historyEmpty');
+    const toastEl = $('toast');
+
+    const modelStatus = $('modelStatus');
+    const btnAlphabet = $('btnAlphabet');
+    const alphabetOverlay = $('alphabetOverlay');
+    const alphabetBackdrop = $('alphabetBackdrop');
+    const alphabetCloseBtn = $('alphabetCloseBtn');
+    const alphabetSubtitle = $('alphabetSubtitle');
+    const alphabetGrid = $('alphabetGrid');
+
+    // ---- config ----
+    const COMMIT_HOLD_MS = 1200;
+    const EMA_ALPHA = 0.4;
+    const HISTORY_KEY = 'signa.history.v1';
+    const MAX_HISTORY_ENTRIES = 100;
+    const AZSL_MODEL_URL = '/models/azsl_hierarchical_model.json';
+
+    // ---- state ----
+    const state = {
+      handDetected: false,
+      holdStartTime: null,
+      alreadyCommitted: false,
+      demoMode: false,
+      lastLabel: undefined,
+    };
+    const smoother = new LandmarkSmoother(EMA_ALPHA);
+    const motionBuffer = new MotionBuffer(10);
+    let sentence = '';
+    let currentWord = '';
+
+    // ------------------------------------------------------------------ //
+    // Toast feedback
+    // ------------------------------------------------------------------ //
+    let toastTimer = null;
+    function showToast(message) {
+      clearTimeout(toastTimer);
+      toastEl.textContent = message;
+      toastEl.classList.add('show');
+      toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 1800);
+    }
+
+    // ------------------------------------------------------------------ //
+    // Web Audio API — subtle commit chime (no external assets). Lazily
+    // created since AudioContext needs a user gesture to start on most
+    // browsers; failures here are always non-fatal.
+    // ------------------------------------------------------------------ //
+    let audioCtx = null;
+    function ensureAudioCtx() {
+      try {
+        if (!audioCtx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (!AudioCtx) return null;
+          audioCtx = new AudioCtx();
+        }
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        return audioCtx;
+      } catch (err) {
+        console.warn('Web Audio unavailable', err);
+        return null;
+      }
+    }
+    function unlockAudio() { ensureAudioCtx(); }
+
+    function chime(kind) {
+      const ctx = ensureAudioCtx();
+      if (!ctx) return;
+      try {
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+
+        if (kind === 'delete') {
+          osc.frequency.setValueAtTime(520, now);
+          osc.frequency.exponentialRampToValueAtTime(320, now + 0.09);
+        } else if (kind === 'space') {
+          osc.frequency.setValueAtTime(660, now);
+          osc.frequency.exponentialRampToValueAtTime(990, now + 0.06);
+          osc.frequency.exponentialRampToValueAtTime(880, now + 0.14);
+        } else {
+          osc.frequency.setValueAtTime(880, now);
+          osc.frequency.exponentialRampToValueAtTime(1320, now + 0.08);
+        }
+
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.22, now + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
+
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.22);
+      } catch (err) {
+        console.warn('Audio chime failed', err);
+      }
+    }
+
+    // ------------------------------------------------------------------ //
+    // Progress ring + live prediction card
+    // ------------------------------------------------------------------ //
+    const RING_RADIUS = progressRing.r.baseVal.value;
+    const RING_CIRC = 2 * Math.PI * RING_RADIUS;
+    progressRing.style.strokeDasharray = String(RING_CIRC);
+    progressRing.style.strokeDashoffset = String(RING_CIRC);
+
+    function setProgress(fraction, color) {
+      const offset = RING_CIRC * (1 - Math.max(0, Math.min(1, fraction)));
+      progressRing.style.strokeDashoffset = String(offset);
+      if (color) progressRing.setAttribute('stroke', color);
+    }
+
+    function renderPrediction(label, confidence, progress, candidates) {
+      const meta = label ? labelMeta(label) : null;
+      liveLetterEl.textContent = meta ? meta.symbol : '–';
+      predictionLabel.textContent = meta ? ('Holding "' + meta.friendly + '"') : 'Awaiting gesture…';
+      confidenceValue.textContent = Math.round(confidence * 100) + '%';
+      confidenceBar.style.width = Math.round(confidence * 100) + '%';
+      const ringColor = progress >= 1 ? '#fbbf24' : '#2dd4bf';
+      setProgress(label ? progress : 0, ringColor);
+
+      const second = candidates && candidates[1];
+      secondCandidateEl.textContent = second
+        ? ('2nd: "' + labelMeta(second.label).friendly + '" (' + Math.round(second.confidence * 100) + '%)')
+        : ' ';
+    }
+
+    function flashCommit() {
+      letterCard.classList.remove('commit-flash');
+      void letterCard.offsetWidth; // restart animation
+      letterCard.classList.add('commit-flash');
+    }
+
+    function renderHandStatus(detected) {
+      if (detected) {
+        handStatusDot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-400 dot-pulse text-emerald-400';
+        handStatusText.textContent = 'HAND DETECTED';
+        handStatusText.className = 'text-emerald-300';
+      } else {
+        handStatusDot.className = 'w-1.5 h-1.5 rounded-full bg-amber-400 dot-pulse text-amber-400';
+        handStatusText.textContent = 'SEARCHING…';
+        handStatusText.className = 'text-[var(--text-dim)]';
+      }
+    }
+
+    function renderDemoStatus() {
+      handStatusDot.className = 'w-1.5 h-1.5 rounded-full bg-amber-400 dot-pulse text-amber-400';
+      handStatusText.textContent = 'DEMO MODE';
+      handStatusText.className = 'text-amber-300';
+    }
+
+    // ------------------------------------------------------------------ //
+    // FPS tracking
+    // ------------------------------------------------------------------ //
+    const frameTimestamps = [];
+    function tickFps() {
+      const now = performance.now();
+      frameTimestamps.push(now);
+      while (frameTimestamps.length && now - frameTimestamps[0] > 1000) frameTimestamps.shift();
+      fpsCounterEl.textContent = String(frameTimestamps.length);
+    }
+
+    // ------------------------------------------------------------------ //
+    // Sentence builder
+    // ------------------------------------------------------------------ //
+    function escapeHtml(str) { return str.replace(/</g, '&lt;'); }
+
+    function renderSentence() {
+      if (currentWord.length) {
+        currentWordChips.innerHTML = currentWord.split('').map(function (ch) {
+          return '<span class="chip">' + escapeHtml(ch) + '</span>';
+        }).join('');
+      } else {
+        currentWordChips.innerHTML = '<span class="text-[var(--text-dim)] text-sm font-mono">—</span>';
+      }
+
+      const full = sentence + currentWord;
+      if (full.trim().length === 0) {
+        sentenceOutput.innerHTML = '<span class="text-[var(--text-dim)]">Start signing to build your sentence…</span><span class="cursor-blink text-teal-400">▍</span>';
+      } else {
+        sentenceOutput.innerHTML =
+          '<span class="text-zinc-100">' + escapeHtml(sentence) + '</span>' +
+          '<span class="text-teal-300/80">' + escapeHtml(currentWord) + '</span>' +
+          '<span class="cursor-blink text-teal-400">▍</span>';
+      }
+      charCount.textContent = full.trim().length + ' chars';
+    }
+
+    function addLetter(ch) { currentWord += ch; renderSentence(); }
+    function commitSpace() { sentence += currentWord + ' '; currentWord = ''; renderSentence(); }
+    function deleteLast() {
+      if (currentWord.length) currentWord = currentWord.slice(0, -1);
+      else if (sentence.length) sentence = sentence.replace(/\s+$/, '').slice(0, -1);
+      renderSentence();
+    }
+    function getFullText() { return sentence + currentWord; }
+
+    // ------------------------------------------------------------------ //
+    // Bigram transition model + lexicon autocorrect.
+    //
+    // AZ_LEXICON is a small, hand-curated set of common Azerbaijani words —
+    // an MVP-scale lexicon for demonstrating the mechanism, not a
+    // comprehensive dictionary. The bigram table P(letter_k | letter_k-1) is
+    // derived from counting adjacent-letter pairs across this same lexicon
+    // (Laplace-smoothed over the 32-letter alphabet) rather than a large
+    // text corpus, which isn't available here — so treat transition
+    // probabilities as directionally useful, not authoritative frequencies.
+    // ------------------------------------------------------------------ //
+    const AZ_LEXICON = [
+      'MƏN', 'SƏN', 'O', 'BİZ', 'SİZ', 'ONLAR', 'NƏ', 'KİM', 'HARADA', 'NECƏ', 'NİYƏ', 'HANSI',
+      'SALAM', 'SAĞOL', 'XOŞ', 'BƏLİ', 'YOX', 'BUYUR', 'TƏŞƏKKÜR',
+      'BİR', 'İKİ', 'ÜÇ', 'DÖRD', 'BEŞ', 'ALTI', 'YEDDİ', 'SƏKKİZ', 'DOQQUZ', 'ON',
+      'ANA', 'ATA', 'BACI', 'QARDAŞ', 'UŞAQ', 'DOST',
+      'EV', 'BAKI', 'GƏNCƏ', 'ŞƏKİ', 'ŞUŞA', 'NAXÇIVAN', 'ŞƏHƏR', 'ÖLKƏ', 'MƏKTƏB', 'MEŞƏ', 'DƏNİZ', 'DAĞ',
+      'SU', 'ÇÖRƏK', 'KİTAB', 'QAPI', 'MASA', 'STUL', 'MAŞIN', 'PUL', 'YOL', 'GÜL', 'AĞAC', 'QUŞ',
+      'İT', 'PİŞİK', 'BALIQ', 'ÇAY', 'SÜD', 'ƏT', 'ALMA', 'ARMUD', 'ÜZÜM',
+      'GÜN', 'GECƏ', 'İL', 'AY', 'HƏFTƏ', 'VAXT', 'SƏHƏR', 'AXŞAM',
+      'YAXŞI', 'PİS', 'BÖYÜK', 'KİÇİK', 'GÖZƏL', 'İSTİ', 'SOYUQ', 'YENİ', 'ÇOX', 'AZ',
+      'GETMƏK', 'GƏLMƏK', 'GÖRMƏK', 'BİLMƏK', 'SEVMƏK', 'İSTƏMƏK', 'YAZMAQ', 'OXUMAQ', 'YEMƏK', 'İÇMƏK', 'İŞLƏMƏK', 'DANIŞMAQ',
+    ];
+
+    const BIGRAM_ALPHA = 0.3; // Laplace smoothing strength
+    const bigramCounts = {}; // bigramCounts[prev][curr] = count
+    const bigramTotals = {}; // bigramTotals[prev] = sum over curr
+    AZ_LEXICON.forEach(function (word) {
+      for (let i = 1; i < word.length; i++) {
+        const prev = word[i - 1], curr = word[i];
+        bigramCounts[prev] = bigramCounts[prev] || {};
+        bigramCounts[prev][curr] = (bigramCounts[prev][curr] || 0) + 1;
+        bigramTotals[prev] = (bigramTotals[prev] || 0) + 1;
+      }
+    });
+
+    function bigramProb(prev, curr) {
+      const total = bigramTotals[prev] || 0;
+      const count = (bigramCounts[prev] && bigramCounts[prev][curr]) || 0;
+      return (count + BIGRAM_ALPHA) / (total + BIGRAM_ALPHA * AZ_ALPHABET.length);
+    }
+
+    // Conservative rescoring: only override the classifier's own top pick
+    // when it was nearly torn between the top two candidates AND the
+    // language model strongly prefers the runner-up given the letter typed
+    // just before it. Never touches the first letter of a word (no context).
+    function rescoreWithBigram(topLabel, candidates, wordSoFar) {
+      if (!candidates || candidates.length < 2 || !wordSoFar) return topLabel;
+      const top = candidates[0], second = candidates[1];
+      if (!top || !second || top.label === second.label) return topLabel;
+      const prev = wordSoFar[wordSoFar.length - 1];
+      const confGap = top.confidence - second.confidence;
+      const pTop = bigramProb(prev, top.label);
+      const pSecond = bigramProb(prev, second.label);
+      if (confGap < 0.15 && pSecond > pTop * 3) return second.label;
+      return topLabel;
+    }
+
+    function levenshtein(a, b) {
+      const m = a.length, n = b.length;
+      const dp = new Array(n + 1);
+      for (let j = 0; j <= n; j++) dp[j] = j;
+      for (let i = 1; i <= m; i++) {
+        let prevDiag = dp[0];
+        dp[0] = i;
+        for (let j = 1; j <= n; j++) {
+          const temp = dp[j];
+          dp[j] = a[i - 1] === b[j - 1]
+            ? prevDiag
+            : 1 + Math.min(prevDiag, dp[j], dp[j - 1]);
+          prevDiag = temp;
+        }
+      }
+      return dp[n];
+    }
+
+    // Replaces the just-finished word with its closest lexicon match when
+    // there's a single, clearly-best candidate within a length-scaled edit
+    // distance — conservative on purpose (ties or distant matches are left
+    // alone rather than guessing).
+    function autoCorrectCurrentWord() {
+      if (!currentWord || currentWord.length < 2) return;
+      if (AZ_LEXICON.indexOf(currentWord) !== -1) return; // already a known word
+
+      let best = null, bestDist = Infinity, secondDist = Infinity;
+      for (let i = 0; i < AZ_LEXICON.length; i++) {
+        const dist = levenshtein(currentWord, AZ_LEXICON[i]);
+        if (dist < bestDist) { secondDist = bestDist; bestDist = dist; best = AZ_LEXICON[i]; }
+        else if (dist < secondDist) { secondDist = dist; }
+      }
+
+      const maxAllowed = Math.max(1, Math.floor(currentWord.length / 3));
+      if (best && bestDist <= maxAllowed && bestDist < secondDist) {
+        const original = currentWord;
+        currentWord = best;
+        showToast('Corrected "' + original + '" -> "' + best + '"');
+      }
+    }
+
+    function clearSentence() {
+      const text = getFullText();
+      if (text.trim().length) {
+        addHistoryEntry(text);
+        showToast('Saved to history');
+      }
+      sentence = '';
+      currentWord = '';
+      renderSentence();
+    }
+
+    // ------------------------------------------------------------------ //
+    // Session history — localStorage persistence + drawer rendering
+    // ------------------------------------------------------------------ //
+    function loadHistory() {
+      try {
+        const raw = localStorage.getItem(HISTORY_KEY);
+        return raw ? JSON.parse(raw) : [];
+      } catch (err) {
+        console.warn('Failed to read history from localStorage', err);
+        return [];
+      }
+    }
+
+    function saveHistory(list) {
+      try {
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(list));
+      } catch (err) {
+        console.warn('Failed to write history to localStorage', err);
+      }
+    }
+
+    function formatTimestamp(ts) {
+      return new Date(ts).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+
+    function downloadText(filename, text) {
+      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function renderHistory() {
+      const list = loadHistory();
+      if (!list.length) {
+        historyList.innerHTML = '';
+        historyEmpty.classList.remove('hidden');
+        return;
+      }
+      historyEmpty.classList.add('hidden');
+      historyList.innerHTML = list.map(function (entry, i) {
+        return (
+          '<div class="history-item" data-index="' + i + '">' +
+            '<div class="flex-1 min-w-0">' +
+              '<p class="font-mono text-[10px] text-[var(--text-dim)] mb-1">' + formatTimestamp(entry.timestamp) + '</p>' +
+              '<p class="text-sm text-zinc-100 break-words">' + escapeHtml(entry.text) + '</p>' +
+            '</div>' +
+            '<div class="flex items-center gap-1 flex-shrink-0">' +
+              '<button class="history-icon-btn" data-action="copy" data-index="' + i + '" title="Copy"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>' +
+              '<button class="history-icon-btn" data-action="download" data-index="' + i + '" title="Download .txt"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg></button>' +
+              '<button class="history-icon-btn history-icon-btn-danger" data-action="delete" data-index="' + i + '" title="Delete"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path></svg></button>' +
+            '</div>' +
+          '</div>'
+        );
+      }).join('');
+    }
+
+    function addHistoryEntry(text) {
+      const trimmed = text.trim();
+      if (!trimmed) return;
+      const list = loadHistory();
+      list.unshift({ text: trimmed, timestamp: Date.now() });
+      saveHistory(list.slice(0, MAX_HISTORY_ENTRIES));
+      renderHistory();
+    }
+
+    function clearHistoryAll() { saveHistory([]); renderHistory(); }
+
+    function removeHistoryAt(index) {
+      const list = loadHistory();
+      list.splice(index, 1);
+      saveHistory(list);
+      renderHistory();
+    }
+
+    function downloadHistoryEntry(index) {
+      const list = loadHistory();
+      const entry = list[index];
+      if (!entry) return;
+      downloadText('signa-' + entry.timestamp + '.txt', entry.text);
+    }
+
+    function downloadAllHistory() {
+      const list = loadHistory();
+      if (!list.length) { showToast('No history to download'); return; }
+      const body = list.slice().reverse().map(function (e) {
+        return '[' + formatTimestamp(e.timestamp) + '] ' + e.text;
+      }).join('\n');
+      downloadText('signa-history-' + Date.now() + '.txt', body);
+    }
+
+    function copyHistoryEntry(index) {
+      const list = loadHistory();
+      const entry = list[index];
+      if (!entry) return;
+      copyToClipboard(entry.text).then(function () { showToast('Copied!'); });
+    }
+
+    historyList.addEventListener('click', function (e) {
+      const btn = e.target.closest('button[data-action]');
+      if (!btn) return;
+      const index = Number(btn.dataset.index);
+      const action = btn.dataset.action;
+      if (action === 'copy') copyHistoryEntry(index);
+      else if (action === 'download') downloadHistoryEntry(index);
+      else if (action === 'delete') removeHistoryAt(index);
+    });
+
+    function openHistory() { closeAlphabet(); historyOverlay.classList.remove('hidden'); renderHistory(); }
+    function closeHistory() { historyOverlay.classList.add('hidden'); }
+    function isHistoryOpen() { return !historyOverlay.classList.contains('hidden'); }
+
+    // ------------------------------------------------------------------ //
+    // Azerbaijani alphabet reference drawer — always shows all 32 letters
+    // (from the hardcoded AZ_ALPHABET order) so it works even before/without
+    // the model loading; each cell is marked "trained" once AZSL_MODEL's
+    // cluster map assigns that letter to a loaded Level-2 sub-classifier.
+    // ------------------------------------------------------------------ //
+    function trainedLetterSet() {
+      const set = {};
+      if (AZSL_MODEL) {
+        for (const cid in AZSL_MODEL.clusters) {
+          AZSL_MODEL.clusters[cid].letters.forEach(function (l) { set[l] = true; });
+        }
+      }
+      return set;
+    }
+
+    function renderAlphabetGrid() {
+      const trainedSet = trainedLetterSet();
+      alphabetGrid.innerHTML = AZ_ALPHABET.map(function (letter) {
+        const trained = !!trainedSet[letter];
+        return (
+          '<div class="alphabet-cell' + (trained ? ' trained' : '') + '">' +
+            '<span>' + letter + '</span>' +
+            '<span class="dot"></span>' +
+          '</div>'
+        );
+      }).join('');
+
+      if (!AZSL_MODEL) {
+        alphabetSubtitle.textContent = 'Loading model coverage…';
+      } else {
+        const count = Object.keys(trainedSet).length;
+        alphabetSubtitle.textContent = count + '/' + AZ_ALPHABET.length + ' letters trained';
+      }
+    }
+
+    function openAlphabet() { closeHistory(); alphabetOverlay.classList.remove('hidden'); renderAlphabetGrid(); }
+    function closeAlphabet() { alphabetOverlay.classList.add('hidden'); }
+    function isAlphabetOpen() { return !alphabetOverlay.classList.contains('hidden'); }
+
+    // ------------------------------------------------------------------ //
+    // Load the trained two-level hierarchical model
+    // (models/azsl_hierarchical_model.json, produced by
+    // scripts/extract_azsl_model.py). Failure here only disables letter
+    // recognition — SPACE/DEL control gestures, Demo Mode, and every other
+    // button keep working regardless.
+    // ------------------------------------------------------------------ //
+    function setModelStatus(html) { modelStatus.innerHTML = 'AzSL model: ' + html; }
+
+    function loadAzslModel() {
+      fetch(AZSL_MODEL_URL)
+        .then(function (res) {
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          return res.json();
+        })
+        .then(function (data) {
+          AZSL_MODEL = data; // already in the exact shape classifyHierarchical() expects
+          const count = Object.keys(trainedLetterSet()).length;
+          const e2e = data.crossValidation && data.crossValidation.endToEnd;
+          const cvText = e2e ? ', 5-fold end-to-end CV ' + Math.round(e2e.mean * 100) + '%' : '';
+          setModelStatus('<span class="text-emerald-300">ready (' + count + '/' + AZ_ALPHABET.length + ' letters' + cvText + ')</span>');
+          renderAlphabetGrid();
+        })
+        .catch(function (err) {
+          console.warn('AzSL model failed to load — letter recognition disabled, control gestures still work:', err.message);
+          setModelStatus('<span class="text-rose-400">failed to load</span> — run scripts/extract_azsl_model.py, or serve via a local server (not file://)');
+          renderAlphabetGrid();
+        });
+    }
+
+    // ------------------------------------------------------------------ //
+    // Clipboard helper with a manual-copy fallback for insecure contexts
+    // (navigator.clipboard requires a secure context / HTTPS or localhost).
+    // ------------------------------------------------------------------ //
+    function copyToClipboard(text) {
+      if (navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext) {
+        return navigator.clipboard.writeText(text);
+      }
+      return new Promise(function (resolve, reject) {
+        try {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.focus();
+          ta.select();
+          const ok = document.execCommand('copy');
+          ta.remove();
+          ok ? resolve() : reject(new Error('execCommand copy failed'));
+        } catch (err) {
+          reject(err);
+        }
+      });
+    }
+
+    // ------------------------------------------------------------------ //
+    // Commit / hold-to-confirm pipeline — shared by camera + demo mode
+    // ------------------------------------------------------------------ //
+    function commitGesture(label, candidates) {
+      if (label === LABELS.SPACE) {
+        autoCorrectCurrentWord();
+        commitSpace();
+        chime('space');
+      } else if (label === LABELS.DEL) {
+        deleteLast();
+        chime('delete');
+      } else {
+        const finalLabel = rescoreWithBigram(label, candidates, currentWord);
+        addLetter(labelMeta(finalLabel).symbol);
+        chime('letter');
+      }
+      flashCommit();
+    }
+
+    function ingestPrediction(label, confidence, candidates) {
+      const now = performance.now();
+
+      if (label !== null && label === state.lastLabel) {
+        // holding steady — keep existing holdStartTime
+      } else {
+        state.lastLabel = label;
+        state.holdStartTime = label !== null ? now : null;
+        state.alreadyCommitted = false;
+      }
+
+      let progress = 0;
+      if (label !== null && state.holdStartTime !== null) {
+        progress = Math.min((now - state.holdStartTime) / COMMIT_HOLD_MS, 1);
+      }
+
+      if (label !== null && progress >= 1 && !state.alreadyCommitted) {
+        state.alreadyCommitted = true;
+        commitGesture(label, candidates);
+      }
+
+      renderPrediction(label, confidence, progress, candidates);
+    }
+
+    function resetHoldState() {
+      state.lastLabel = undefined;
+      state.holdStartTime = null;
+      state.alreadyCommitted = false;
+    }
+
+    // ------------------------------------------------------------------ //
+    // Canvas skeleton drawing — guarded so a missing/partial drawing-utils
+    // library can never crash the hand-tracking loop.
+    // ------------------------------------------------------------------ //
+    function drawSkeleton(landmarks) {
+      try {
+        canvasCtx.save();
+        canvasCtx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+        if (window.HAND_CONNECTIONS && typeof window.drawConnectors === 'function') {
+          window.drawConnectors(canvasCtx, landmarks, window.HAND_CONNECTIONS, { color: 'rgba(45,212,191,0.65)', lineWidth: 2 });
+        }
+        if (typeof window.drawLandmarks === 'function') {
+          window.drawLandmarks(canvasCtx, landmarks, { color: '#8b5cf6', fillColor: '#c4b5fd', radius: 3, lineWidth: 1 });
+        }
+        canvasCtx.restore();
+      } catch (err) {
+        console.warn('Skeleton drawing failed (non-fatal)', err);
+      }
+    }
+
+    function clearSkeleton() { canvasCtx.clearRect(0, 0, canvasEl.width, canvasEl.height); }
+
+    // ==================================================================
+    // STEP 1 — Wire every button, toggle and keyboard shortcut RIGHT NOW.
+    // None of this depends on MediaPipe or camera state in any way.
+    // ==================================================================
+    btnCopy.addEventListener('click', function () {
+      const text = getFullText().trim();
+      if (!text) { showToast('Nothing to copy yet'); return; }
+      copyToClipboard(text).then(function () {
+        showToast('Copied!');
+      }).catch(function (err) {
+        console.error('Copy failed', err);
+        showToast('Copy failed');
+      });
+    });
+
+    btnSpeak.addEventListener('click', function () {
+      const text = getFullText().trim();
+      if (!text) { showToast('Nothing to read yet'); return; }
+      if (!('speechSynthesis' in window)) { showToast('Speech not supported'); return; }
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 0.95;
+      window.speechSynthesis.speak(utterance);
+    });
+
+    btnClear.addEventListener('click', clearSentence);
+    btnHistory.addEventListener('click', openHistory);
+    btnEnableDemoFromOverlay.addEventListener('click', function () { setDemoMode(true); });
+
+    historyCloseBtn.addEventListener('click', closeHistory);
+    historyBackdrop.addEventListener('click', closeHistory);
+    historyClearBtn.addEventListener('click', function () { clearHistoryAll(); showToast('History cleared'); });
+    historyDownloadAllBtn.addEventListener('click', downloadAllHistory);
+
+    btnAlphabet.addEventListener('click', openAlphabet);
+    alphabetCloseBtn.addEventListener('click', closeAlphabet);
+    alphabetBackdrop.addEventListener('click', closeAlphabet);
+
+    demoToggle.addEventListener('click', function () { setDemoMode(!state.demoMode); });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.repeat) return;
+
+      if (isHistoryOpen()) {
+        if (e.key === 'Escape') { e.preventDefault(); closeHistory(); }
+        return;
+      }
+      if (isAlphabetOpen()) {
+        if (e.key === 'Escape') { e.preventDefault(); closeAlphabet(); }
+        return;
+      }
+
+      switch (e.key) {
+        case ' ':
+          e.preventDefault();
+          commitSpace();
+          chime('space');
+          break;
+        case 'Backspace':
+          e.preventDefault();
+          deleteLast();
+          chime('delete');
+          break;
+        case 'Escape':
+          e.preventDefault();
+          clearSentence();
+          break;
+        case 's':
+        case 'S':
+          if (!e.ctrlKey && !e.metaKey && !e.altKey) btnSpeak.click();
+          break;
+        default:
+          break;
+      }
+    });
+
+    document.addEventListener('pointerdown', unlockAudio, { once: true });
+    document.addEventListener('keydown', unlockAudio, { once: true });
+
+    // ==================================================================
+    // STEP 2 — Render initial UI state immediately. Works with zero
+    // camera/MediaPipe involvement.
+    // ==================================================================
+    renderSentence();
+    renderPrediction(null, 0, 0);
+    renderHistory();
+    renderHandStatus(false);
+    renderAlphabetGrid();
+    loadAzslModel();
+
+    // ==================================================================
+    // STEP 3 — Demo Auto-Type mode. Entirely self-contained: drives the
+    // exact same ingestPrediction()/commitGesture() pipeline via timers,
+    // never touches `hands`/`camera`, so it works even if MediaPipe never
+    // loads at all.
+    // ==================================================================
+    // Spells "SALAM BAKI" (Azerbaijani for "Hello Baku") then demonstrates
+    // DEL — a friendly showcase of the full alphabet plus both control gestures.
+    const DEMO_SEQUENCE = [
+      'S', 'A', 'L', 'A', 'M', LABELS.SPACE,
+      'B', 'A', 'K', 'I', LABELS.DEL, 'I', LABELS.SPACE,
+    ];
+    let demoTimer = null;
+    let demoRampInterval = null;
+    let demoIndex = 0;
+
+    function runDemoStep() {
+      const label = DEMO_SEQUENCE[demoIndex % DEMO_SEQUENCE.length];
+      demoIndex++;
+
+      const rampStart = performance.now();
+      resetHoldState();
+
+      demoRampInterval = setInterval(function () {
+        const elapsed = performance.now() - rampStart;
+        if (state.holdStartTime === null) state.holdStartTime = performance.now() - elapsed;
+        ingestPrediction(label, 0.92);
+        if (elapsed >= COMMIT_HOLD_MS + 150) {
+          clearInterval(demoRampInterval);
+          ingestPrediction(null, 0);
+        }
+      }, 40);
+
+      demoTimer = setTimeout(runDemoStep, COMMIT_HOLD_MS + 650);
+    }
+
+    function setDemoMode(on) {
+      state.demoMode = on;
+      demoToggle.classList.toggle('on', on);
+      demoToggle.setAttribute('aria-checked', String(on));
+      demoBanner.classList.toggle('hidden', !on);
+
+      if (on) {
+        loadingOverlay.classList.add('hidden');
+        errorOverlay.classList.add('hidden');
+        renderDemoStatus();
+        clearSkeleton();
+        demoIndex = 0;
+        runDemoStep();
+      } else {
+        clearTimeout(demoTimer);
+        clearInterval(demoRampInterval);
+        resetHoldState();
+        ingestPrediction(null, 0);
+        renderHandStatus(state.handDetected);
+      }
+    }
+
+    // ==================================================================
+    // STEP 4 — MediaPipe + Camera, fully isolated behind try/catch and a
+    // dynamic script loader. ANY failure here (blocked CDN, no camera,
+    // permission denied, insecure context) can only ever show a status
+    // banner — it can never break or delay the UI wired above.
+    // ==================================================================
+    function showCameraOffline(message) {
+      loadingOverlay.classList.add('hidden');
+      errorOverlay.classList.remove('hidden');
+      errorTitle.textContent = 'Camera Offline';
+      errorText.textContent = (message ? message + ' ' : '') + 'Click Demo Toggle to preview.';
+    }
+
+    function getInsecureContextWarning() {
+      if (window.isSecureContext) return null;
+      if (location.protocol === 'file:') {
+        return 'Opened directly as a local file (file://) — browsers block camera access here. Serve this folder with "npm run dev" and open http://localhost instead.';
+      }
+      return 'This page is not running in a secure context (HTTPS or http://localhost required) — browsers block camera access here.';
+    }
+
+    function loadScriptOnce(src) {
+      return new Promise(function (resolve, reject) {
+        const existing = document.querySelector('script[data-signa-src="' + src + '"]');
+        if (existing) { resolve(); return; }
+        const s = document.createElement('script');
+        s.src = src;
+        s.crossOrigin = 'anonymous';
+        s.dataset.signaSrc = src;
+        s.onload = function () { resolve(); };
+        s.onerror = function () { reject(new Error('Failed to load script: ' + src)); };
+        document.head.appendChild(s);
+      });
+    }
+
+    function initMediaPipe() {
+      const insecureWarning = getInsecureContextWarning();
+      if (insecureWarning) {
+        console.warn('Skipping camera/MediaPipe init:', insecureWarning);
+        showCameraOffline(insecureWarning);
+        return;
+      }
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        console.warn('getUserMedia unsupported in this browser.');
+        showCameraOffline('This browser does not support camera access.');
+        return;
+      }
+
+      loadScriptOnce('https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js')
+        .then(function () { return loadScriptOnce('https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js'); })
+        .then(function () { return loadScriptOnce('https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js'); })
+        .then(function () {
+          if (typeof window.Hands !== 'function' || typeof window.Camera !== 'function') {
+            throw new Error('MediaPipe globals missing after script load.');
+          }
+
+          let handsReady = false;
+          const hands = new window.Hands({
+            locateFile: function (file) { return 'https://cdn.jsdelivr.net/npm/@mediapipe/hands/' + file; },
+          });
+          hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.7, minTrackingConfidence: 0.7 });
+
+          hands.onResults(function (results) {
+            try {
+              if (!handsReady) { handsReady = true; loadingOverlay.classList.add('hidden'); }
+              tickFps();
+
+              if (canvasEl.width !== videoEl.videoWidth && videoEl.videoWidth) {
+                canvasEl.width = videoEl.videoWidth;
+                canvasEl.height = videoEl.videoHeight;
+              }
+
+              if (state.demoMode) { clearSkeleton(); return; }
+
+              const hasHand = results.multiHandLandmarks && results.multiHandLandmarks.length > 0;
+              state.handDetected = hasHand;
+              renderHandStatus(hasHand);
+
+              if (hasHand) {
+                const rawLandmarks = results.multiHandLandmarks[0];
+                const smoothed = smoother.update(rawLandmarks);
+                drawSkeleton(smoothed);
+                // Letter centroids were trained in a canonical "Right hand"
+                // orientation (see extract_azsl_model.py) — mirror left-hand
+                // live samples the same way before comparing.
+                const mirrorX = !!(results.multiHandedness && results.multiHandedness[0] &&
+                  results.multiHandedness[0].label === 'Left');
+                // Velocity comes from the RAW (pre-smoothing) wrist position,
+                // matching how training-time velocity was measured.
+                const velocity = motionBuffer.velocityAndPush(rawLandmarks[LM.WRIST].x, rawLandmarks[LM.WRIST].y);
+                const prediction = predictGesture(smoothed, mirrorX, velocity);
+                ingestPrediction(prediction.label, prediction.confidence, prediction.candidates);
+              } else {
+                smoother.reset();
+                motionBuffer.reset();
+                clearSkeleton();
+                ingestPrediction(null, 0);
+              }
+            } catch (innerErr) {
+              console.error('Hand-results processing error (non-fatal):', innerErr);
+            }
+          });
+
+          const camera = new window.Camera(videoEl, {
+            onFrame: function () {
+              return hands.send({ image: videoEl }).catch(function (err) {
+                console.warn('hands.send failed (non-fatal)', err);
+              });
+            },
+            width: 1280,
+            height: 720,
+          });
+
+          return camera.start().catch(function (err) {
+            console.warn('Camera start failed:', err);
+            showCameraOffline('Camera permission denied or no camera found.');
+          });
+        })
+        .catch(function (err) {
+          console.warn('MediaPipe/camera setup skipped:', err.message);
+          showCameraOffline('Hand-tracking library failed to load.');
+        });
+    }
+
+    initMediaPipe();
+
+  }); // DOMContentLoaded
+})();
+</script>
+</body>
+</html>
