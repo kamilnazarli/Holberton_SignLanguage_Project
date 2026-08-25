@@ -6,6 +6,11 @@ dist/
 # scripts/extract_azsl_model.py rather than committing them.
 AzSLD_Fingerspelling.zip
 data/
-models/*.task
-# models/azsl_hierarchical_model.json is small (~470KB) and IS meant to be
-# committed so the frontend has a model to fetch without re-running extraction.
+public/models/*.task
+# public/models/azsl_hierarchical_model.json is small (~470KB) and IS meant to
+# be committed so the frontend has a model to fetch without re-running
+# extraction. It lives under public/ so `vite build` copies it into dist/ —
+# moving it back out of public/ will 404 in production (fetch falls back to
+# index.html via Vite's SPA fallback and silently disables the classifier).
+
+*.zip

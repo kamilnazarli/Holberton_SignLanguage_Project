@@ -35,7 +35,8 @@ Pipeline:
      80-dim vector). 5-fold stratified CV reported for both levels AND for
      the full dispatch-then-classify pipeline end to end.
   4. Export scalers + MLP weights + cluster map + CV report to
-     models/azsl_hierarchical_model.json for the browser to run natively.
+     public/models/azsl_hierarchical_model.json for the browser to run
+     natively (must live under public/ so `vite build` copies it into dist/).
 
 Usage:
     python scripts/extract_azsl_model.py
@@ -406,8 +407,8 @@ def end_to_end_cross_validate(X, y_letter, y_cluster, seed, folds=5):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--data-dir", default="data/AzSLD_Fingerspelling")
-    parser.add_argument("--model-path", default="models/hand_landmarker.task")
-    parser.add_argument("--output", default="models/azsl_hierarchical_model.json")
+    parser.add_argument("--model-path", default="public/models/hand_landmarker.task")
+    parser.add_argument("--output", default="public/models/azsl_hierarchical_model.json")
     parser.add_argument("--max-per-class", type=int, default=250)
     parser.add_argument("--min-confidence", type=float, default=0.5)
     parser.add_argument("--seed", type=int, default=42)
