@@ -1,0 +1,200 @@
+{
+  "config": {
+    "model_type": "gru",
+    "input_dim": 63,
+    "sequence_length": 20,
+    "hidden_dim": 64,
+    "num_layers": 2,
+    "bidirectional": 1,
+    "dense_dim": 48,
+    "dropout": 0.25,
+    "num_classes": 7,
+    "classes": [
+      "C",
+      "D",
+      "Ö",
+      "Ş",
+      "Ü",
+      "Y",
+      "Z"
+    ]
+  },
+  "classes": [
+    "C",
+    "D",
+    "Ö",
+    "Ş",
+    "Ü",
+    "Y",
+    "Z"
+  ],
+  "extra_meta": {
+    "timestamp": "2026-08-29T11:40:23.423003+00:00",
+    "config": {
+      "model_type": "gru",
+      "input_dim": 63,
+      "sequence_length": 20,
+      "hidden_dim": 64,
+      "num_layers": 2,
+      "bidirectional": 1,
+      "dense_dim": 48,
+      "dropout": 0.25,
+      "num_classes": 7,
+      "classes": [
+        "C",
+        "D",
+        "Ö",
+        "Ş",
+        "Ü",
+        "Y",
+        "Z"
+      ]
+    },
+    "best_epoch": 21,
+    "metrics": {
+      "test_accuracy": 0.992,
+      "test_macro_f1": 0.8511,
+      "validation_macro_f1": 0.9824
+    },
+    "classification_report": {
+      "C": {
+        "precision": 1.0,
+        "recall": 0.9807692307692307,
+        "f1-score": 0.9902912621359223,
+        "support": 52.0
+      },
+      "D": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 14.0
+      },
+      "Ö": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 32.0
+      },
+      "Ş": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 10.0
+      },
+      "Ü": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
+        "support": 0.0
+      },
+      "Y": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 2.0
+      },
+      "Z": {
+        "precision": 0.9375,
+        "recall": 1.0,
+        "f1-score": 0.967741935483871,
+        "support": 15.0
+      },
+      "accuracy": 0.992,
+      "macro avg": {
+        "precision": 0.8482142857142857,
+        "recall": 0.8543956043956044,
+        "f1-score": 0.8511475996599706,
+        "support": 125.0
+      },
+      "weighted avg": {
+        "precision": 0.9925,
+        "recall": 0.992,
+        "f1-score": 0.9920901973066083,
+        "support": 125.0
+      }
+    },
+    "confusion_matrix": [
+      [
+        51,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1
+      ],
+      [
+        0,
+        14,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        32,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        10,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        2,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        15
+      ]
+    ],
+    "classes": [
+      "C",
+      "D",
+      "Ö",
+      "Ş",
+      "Ü",
+      "Y",
+      "Z"
+    ],
+    "class_to_idx": {
+      "C": 0,
+      "D": 1,
+      "Ö": 2,
+      "Ş": 3,
+      "Ü": 4,
+      "Y": 5,
+      "Z": 6
+    }
+  }
+}

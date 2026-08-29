@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "<string>", line 7, in <module>
+    from scripts.train_dynamic import SignSequenceDataset, train_one_epoch
+  File "C:\Users\User\OneDrive\Desktop\Holberton_SignLanguage_Project\scripts\train_dynamic.py", line 40, in <module>
+    from scripts.dynamic_dataset import (
+    ...<5 lines>...
+    )
+ImportError: cannot import name 'CLASS_TO_IDX' from 'scripts.dynamic_dataset' (C:\Users\User\OneDrive\Desktop\Holberton_SignLanguage_Project\scripts\dynamic_dataset.py)
