@@ -1,5 +1,6 @@
 {
-  "timestamp": "2026-08-29T11:40:23.423003+00:00",
+  "timestamp": "2026-08-29T12:41:09.535269+00:00",
+  "cache_version": "v2.0_stratified_clean",
   "config": {
     "model_type": "gru",
     "input_dim": 63,
@@ -20,18 +21,123 @@
       "Z"
     ]
   },
-  "best_epoch": 21,
+  "best_epoch": 60,
   "metrics": {
-    "test_accuracy": 0.992,
-    "test_macro_f1": 0.8511,
-    "validation_macro_f1": 0.9824
+    "test_accuracy": 1.0,
+    "test_macro_f1": 0.8571,
+    "test_weighted_f1": 1.0,
+    "validation_macro_f1": 0.7143
   },
+  "split_breakdown": {
+    "C": {
+      "train": [
+        1,
+        1
+      ],
+      "val": [
+        0,
+        0
+      ],
+      "test": [
+        1,
+        1
+      ]
+    },
+    "D": {
+      "train": [
+        40,
+        57
+      ],
+      "val": [
+        14,
+        19
+      ],
+      "test": [
+        14,
+        14
+      ]
+    },
+    "Ö": {
+      "train": [
+        6,
+        107
+      ],
+      "val": [
+        2,
+        37
+      ],
+      "test": [
+        2,
+        82
+      ]
+    },
+    "Ş": {
+      "train": [
+        1,
+        1
+      ],
+      "val": [
+        0,
+        0
+      ],
+      "test": [
+        0,
+        0
+      ]
+    },
+    "Ü": {
+      "train": [
+        1,
+        134
+      ],
+      "val": [
+        1,
+        27
+      ],
+      "test": [
+        1,
+        89
+      ]
+    },
+    "Y": {
+      "train": [
+        5,
+        113
+      ],
+      "val": [
+        2,
+        73
+      ],
+      "test": [
+        2,
+        36
+      ]
+    },
+    "Z": {
+      "train": [
+        29,
+        65
+      ],
+      "val": [
+        9,
+        27
+      ],
+      "test": [
+        9,
+        10
+      ]
+    }
+  },
+  "split_warnings": [
+    "Class 'C' has only 2 discovered groups: 1 assigned to Train, 1 to Test (Val=0).",
+    "Class 'Ş' has only 1 discovered group in source dataset: assigned to Train (Val=0, Test=0)."
+  ],
   "classification_report": {
     "C": {
       "precision": 1.0,
-      "recall": 0.9807692307692307,
-      "f1-score": 0.9902912621359223,
-      "support": 52.0
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 1.0
     },
     "D": {
       "precision": 1.0,
@@ -43,55 +149,55 @@
       "precision": 1.0,
       "recall": 1.0,
       "f1-score": 1.0,
-      "support": 32.0
+      "support": 82.0
     },
     "Ş": {
-      "precision": 1.0,
-      "recall": 1.0,
-      "f1-score": 1.0,
-      "support": 10.0
-    },
-    "Ü": {
       "precision": 0.0,
       "recall": 0.0,
       "f1-score": 0.0,
       "support": 0.0
     },
+    "Ü": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 89.0
+    },
     "Y": {
       "precision": 1.0,
       "recall": 1.0,
       "f1-score": 1.0,
-      "support": 2.0
+      "support": 36.0
     },
     "Z": {
-      "precision": 0.9375,
+      "precision": 1.0,
       "recall": 1.0,
-      "f1-score": 0.967741935483871,
-      "support": 15.0
+      "f1-score": 1.0,
+      "support": 10.0
     },
-    "accuracy": 0.992,
+    "accuracy": 1.0,
     "macro avg": {
-      "precision": 0.8482142857142857,
-      "recall": 0.8543956043956044,
-      "f1-score": 0.8511475996599706,
-      "support": 125.0
+      "precision": 0.8571428571428571,
+      "recall": 0.8571428571428571,
+      "f1-score": 0.8571428571428571,
+      "support": 232.0
     },
     "weighted avg": {
-      "precision": 0.9925,
-      "recall": 0.992,
-      "f1-score": 0.9920901973066083,
-      "support": 125.0
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 232.0
     }
   },
   "confusion_matrix": [
     [
-      51,
+      1,
       0,
       0,
       0,
       0,
       0,
-      1
+      0
     ],
     [
       0,
@@ -105,17 +211,8 @@
     [
       0,
       0,
-      32,
+      82,
       0,
-      0,
-      0,
-      0
-    ],
-    [
-      0,
-      0,
-      0,
-      10,
       0,
       0,
       0
@@ -134,8 +231,17 @@
       0,
       0,
       0,
+      89,
       0,
-      2,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      36,
       0
     ],
     [
@@ -145,7 +251,7 @@
       0,
       0,
       0,
-      15
+      10
     ]
   ],
   "classes": [

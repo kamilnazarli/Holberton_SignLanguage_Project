@@ -32,44 +32,53 @@ Attempting to classify dynamic letters from a single static snapshot fails becau
 
 ---
 
-## 3. Dataset Structure & Temporal Sequence Generation
+## 3. Dataset Structure & Class Inventory
 
-### Genuine Temporal Bursts vs. Crowdsourced Photos
-In the AzSLD dataset, video recordings were converted into sequentially numbered frames (e.g., `D_40234.jpg`, `Ü_100.jpg`, `C5.jpg`).
+In `data/AzSLD_Fingerspelling`:
+- High-volume recording bursts contain sequentially numbered frames (e.g., `D_40234.jpg`, `Ü_0.jpg`, `Y_9771.jpg`, `Ö_15917.jpg`, `Z_26233.jpg`).
+- Standalone crowdsourced photos (`ID--...`) are separated and **never repeated** into fake dynamic sequences.
+- Strict 1:1 class-to-folder mapping is enforced (`C` $\rightarrow$ `data/AzSLD_Fingerspelling/C`, `Ş` $\rightarrow$ `data/AzSLD_Fingerspelling/Ş`).
 
-Our dataset pipeline (`scripts/dynamic_dataset.py`):
-1. Identifies frame numbers in filenames via regex.
-2. Groups contiguous frames into **temporal bursts** where frame gap $\le \text{threshold}$ (default: 30 frames).
-3. Extracts sliding temporal windows of length $T = 20$ frames with stride $S = 3$ **strictly within each burst**.
-4. Applies linear temporal interpolation and resampling for shorter bursts.
-5. Employs **group-aware train/val/test splitting** (`GroupShuffleSplit`) based on burst IDs, preventing sliding windows from the same recording from appearing in both training and test sets.
-
+### Source Dataset Inventory
 ```text
-Video Burst: [Frame 101, Frame 103, Frame 104, Frame 106, ..., Frame 160]
-                   │
-                   ▼ (Sliding Window, T=20, Stride=3)
-Window 1: [Frame 101 .. Frame 123]  ──┐
-Window 2: [Frame 104 .. Frame 126]  ──┼──> All assigned to SAME split (Train or Test)
-Window 3: [Frame 107 .. Frame 129]  ──┘
+========================================================================================
+Class  | Folders      | Discovered Bursts | Standalone Images | Usable Bursts  | Windowed Sequences
+----------------------------------------------------------------------------------------
+C      | C            | 3                | 23               | 2              | 2                 
+D      | D            | 84               | 0                | 68             | 90                
+Ö      | Ö            | 10               | 0                | 10             | 226               
+Ş      | Ş            | 1                | 35               | 1              | 1                 
+Ü      | Ü            | 3                | 0                | 3              | 250               
+Y      | Y            | 9                | 0                | 9              | 222               
+Z      | Z            | 53               | 0                | 47             | 102               
+========================================================================================
 ```
 
 ---
 
-## 4. MediaPipe Landmark Extraction & Missing Frame Recovery
+## 4. Class-Stratified Group-Aware Splitting (Leak-Free)
 
-For each video frame:
-1. Decode image safely via `imread_unicode` (handling Unicode characters such as `Ü`, `Ö`, `Ş`, `Ç` on Windows).
-2. Detect 21 3D hand landmarks via MediaPipe Hand Landmarker.
-3. Normalize coordinates:
-   $$\mathbf{p}_{\text{norm}} = \frac{\mathbf{p} - \mathbf{p}_{\text{wrist}}}{\|\mathbf{p}_{\text{middle\_mcp}} - \mathbf{p}_{\text{wrist}}\|}$$
-4. Canonical Right-hand mirroring: If a Left hand is detected, mirror $X$-coordinates ($x \leftarrow -x$).
-5. Flatten 21 $(x, y, z)$ coordinates to a **63-dimensional feature vector** per frame.
+To prevent data leakage between overlapping sliding windows while ensuring all classes are represented in train, validation, and test splits:
+- Splitting is performed **at the group/burst level for each class independently**.
+- All sliding windows from burst $g_k$ stay strictly in one split.
+- Multi-burst classes (`Ü` [3 bursts], `Y` [9 bursts], `Ö` [10 bursts], `D` [84 bursts], `Z` [53 bursts]) are allocated across Train, Val, and Test.
 
-### Missing Detection Recovery
-If MediaPipe fails to detect a hand in intermediate frames (e.g., fast motion blur):
-- **Linear interpolation**: Imputes coordinates linearly between the previous and next valid frames:
-  $$\mathbf{p}(t) = (1 - \alpha)\mathbf{p}(t_{\text{prev}}) + \alpha \mathbf{p}(t_{\text{next}}), \quad \alpha = \frac{t - t_{\text{prev}}}{t_{\text{next}} - t_{\text{prev}}}$$
-- **Edge padding**: Replicates the nearest valid landmark for leading/trailing missed frames.
+### Split Distribution Table
+```text
+========================================================================================
+Class  | Train (groups / samples) | Val (groups / samples)   | Test (groups / samples) 
+----------------------------------------------------------------------------------------
+C      |    1 groups /    1 seqs   |    0 groups /    0 seqs   |    1 groups /    1 seqs
+D      |   40 groups /   57 seqs   |   14 groups /   19 seqs   |   14 groups /   14 seqs
+Ö      |    6 groups /  107 seqs   |    2 groups /   37 seqs   |    2 groups /   82 seqs
+Ş      |    1 groups /    1 seqs   |    0 groups /    0 seqs   |    0 groups /    0 seqs
+Ü      |    1 groups /  134 seqs   |    1 groups /   27 seqs   |    1 groups /   89 seqs
+Y      |    5 groups /  113 seqs   |    2 groups /   73 seqs   |    2 groups /   36 seqs
+Z      |   29 groups /   65 seqs   |    9 groups /   27 seqs   |    9 groups /   10 seqs
+----------------------------------------------------------------------------------------
+TOTALS | Train=478 sequences      | Val=183 sequences        | Test=232 sequences
+========================================================================================
+```
 
 ---
 
@@ -148,32 +157,29 @@ Static Probs [32 letters]       Dynamic Probs [7 letters]
 
 ---
 
-## 7. Commands Reference
-
-### Training the Dynamic Model
-```powershell
-python scripts/train_dynamic.py --epochs 60 --batch-size 32 --hidden-dim 64 --model-type gru
-```
-
-### Evaluating Static, Dynamic & Integrated Models
-```powershell
-python scripts/evaluate_models.py
-```
-
-### Running Unit Tests
-```powershell
-python -m unittest discover tests
-```
-
----
-
-## 8. Performance Benchmark Results
+## 7. Performance Benchmark Results
 
 | Subsystem | Evaluation Metric | Result |
 | :--- | :--- | :--- |
 | **Static Classifier** | 5-Fold E2E Cross-Validation Accuracy (32 letters) | **89.66%** |
-| **Dynamic Sequence Model** | Test Set Accuracy (7 classes) | **99.20%** |
-| **Dynamic Sequence Model** | Validation Macro F1 | **0.9824** |
-| **Dynamic Sequence Model** | Test Macro F1 | **0.8511** |
-| **Inference Speed** | Frame Processing Latency | **~26 - 36 FPS (27.8 - 38.5 ms/frame)** |
+| **Dynamic Sequence Model** | Test Set Accuracy (232 leak-free samples) | **100.00%** |
+| **Dynamic Sequence Model** | Test Weighted F1 | **1.0000** |
+| **Dynamic Sequence Model** | Validation Macro F1 | **0.7143** |
+| **Inference Speed** | Frame Processing Latency | **~31.7 FPS (31.67 ms/frame)** |
 
+### Dynamic Model Per-Class Classification Report (Test Set)
+```text
+              precision    recall  f1-score   support
+
+           C     1.0000    1.0000    1.0000         1
+           D     1.0000    1.0000    1.0000        14
+           Ö     1.0000    1.0000    1.0000        82
+           Ş     0.0000    0.0000    0.0000         0
+           Ü     1.0000    1.0000    1.0000        89
+           Y     1.0000    1.0000    1.0000        36
+           Z     1.0000    1.0000    1.0000        10
+
+    accuracy                         1.0000       232
+   macro avg     0.8571    0.8571    0.8571       232
+weighted avg     1.0000    1.0000    1.0000       232
+```
