@@ -19,6 +19,7 @@
   CDN script also prints its own "should not be used in production" warning.
 -->
 <link rel="stylesheet" href="/src/tailwind.css">
+<script type="module" src="/src/dynamicInference.js"></script>
 
 <!--
   NOTE: MediaPipe Hands / Camera / Drawing-utils are intentionally NOT loaded
@@ -320,6 +321,9 @@
         <p class="mt-2 px-1 text-[11px] font-mono text-[var(--text-dim)]" id="modelStatus">
           AzSL model: <span class="text-amber-300">loading…</span>
         </p>
+        <p class="mt-1 px-1 text-[11px] font-mono text-[var(--text-dim)]" id="dynamicStatus">
+          Dynamic engine: <span class="text-amber-300">loading…</span>
+        </p>
       </section>
 
       <!-- ================= RIGHT: TRANSLATION PANEL ================= -->
@@ -336,8 +340,14 @@
             <span id="liveLetter" class="font-display absolute text-4xl font-700">–</span>
           </div>
           <div class="flex-1 min-w-0">
-            <p class="font-mono text-[11px] text-[var(--text-dim)] tracking-wide mb-1.5">ACTIVE PREDICTION</p>
-            <p id="predictionLabel" class="font-display text-xl font-600 mb-3 truncate">Awaiting gesture…</p>
+            <div class="flex items-center justify-between gap-2 mb-1.5">
+              <p class="font-mono text-[11px] text-[var(--text-dim)] tracking-wide">ACTIVE PREDICTION</p>
+              <div class="flex items-center gap-1.5">
+                <span id="modeBadge" class="font-mono text-[9px] px-2 py-0.5 rounded-full border border-teal-400/30 bg-teal-400/10 text-teal-300">MODE: STATIC</span>
+              </div>
+            </div>
+            <p id="predictionLabel" class="font-display text-xl font-600 mb-1 truncate">Awaiting gesture…</p>
+            <p id="dynamicDebugInfo" class="font-mono text-[10px] text-[var(--text-dim)] mb-2 truncate">&nbsp;</p>
             <div class="w-full h-1.5 bg-[var(--panel-2)] rounded-full overflow-hidden mb-2">
               <div id="confidenceBar" class="h-full bg-gradient-to-r from-teal-400 to-violet-400 transition-[width] duration-200 ease-out" style="width:0%"></div>
             </div>
@@ -825,6 +835,9 @@
     const confidenceBar = $('confidenceBar');
     const confidenceValue = $('confidenceValue');
     const secondCandidateEl = $('secondCandidate');
+    const modeBadge = $('modeBadge');
+    const dynamicDebugInfo = $('dynamicDebugInfo');
+    const dynamicStatus = $('dynamicStatus');
 
     const currentWordChips = $('currentWordChips');
     const sentenceOutput = $('sentenceOutput');
@@ -967,6 +980,21 @@
       secondCandidateEl.textContent = second
         ? ('2nd: "' + labelMeta(second.label).friendly + '" (' + Math.round(second.confidence * 100) + '%)')
         : ' ';
+    }
+
+    function renderModeStatus(mode, debugInfo) {
+      if (modeBadge) {
+        if (mode === 'DYNAMIC') {
+          modeBadge.textContent = 'MODE: DYNAMIC';
+          modeBadge.className = 'font-mono text-[9px] px-2 py-0.5 rounded-full border border-violet-400/60 bg-violet-500/25 text-violet-300 font-semibold';
+        } else {
+          modeBadge.textContent = 'MODE: STATIC';
+          modeBadge.className = 'font-mono text-[9px] px-2 py-0.5 rounded-full border border-teal-400/30 bg-teal-400/10 text-teal-300';
+        }
+      }
+      if (dynamicDebugInfo) {
+        dynamicDebugInfo.textContent = debugInfo || ' ';
+      }
     }
 
     function flashCommit() {
@@ -1337,6 +1365,44 @@
     }
 
     // ------------------------------------------------------------------ //
+    // Load the ONNX Runtime Web Dynamic Model (/models/dynamic_model.onnx)
+    // ------------------------------------------------------------------ //
+    let dynamicPredictor = null;
+
+    function setDynamicStatus(html) {
+      if (dynamicStatus) dynamicStatus.innerHTML = 'Dynamic engine: ' + html;
+    }
+
+    function loadDynamicEngine() {
+      const DynamicPredictorClass = (window.SignaDynamic && window.SignaDynamic.DynamicSignPredictor) || null;
+      if (!DynamicPredictorClass) {
+        setDynamicStatus('<span class="text-amber-300">module loading…</span>');
+        return;
+      }
+
+      if (!dynamicPredictor) {
+        dynamicPredictor = new DynamicPredictorClass({
+          modelUrl: '/models/dynamic_model.onnx',
+          sequenceLength: 20,
+          motionThreshold: 0.038,
+          minConfidence: 0.60,
+          stabilityWindow: 3,
+        });
+      }
+
+      dynamicPredictor.loadModel().then(function (session) {
+        if (session) {
+          setDynamicStatus('<span class="text-emerald-300">ready (ONNX Web / 7 letters: C, D, Ö, Ş, Ü, Y, Z)</span>');
+        } else {
+          setDynamicStatus('<span class="text-amber-400">offline</span>');
+        }
+      }).catch(function (err) {
+        console.warn('Dynamic model load exception:', err);
+        setDynamicStatus('<span class="text-rose-400">load error</span>');
+      });
+    }
+
+    // ------------------------------------------------------------------ //
     // Clipboard helper with a manual-copy fallback for insecure contexts
     // (navigator.clipboard requires a secure context / HTTPS or localhost).
     // ------------------------------------------------------------------ //
@@ -1522,6 +1588,7 @@
     renderHandStatus(false);
     renderAlphabetGrid();
     loadAzslModel();
+    loadDynamicEngine();
 
     // ==================================================================
     // STEP 3 — Demo Auto-Type mode. Entirely self-contained: drives the
@@ -1633,6 +1700,13 @@
         .then(function () { return loadScriptOnce('https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js'); })
         .then(function () { return loadScriptOnce('https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js'); })
         .then(function () {
+          return loadScriptOnce('https://cdn.jsdelivr.net/npm/onnxruntime-web@1.21.0/dist/ort.min.js').catch(function (e) {
+            console.warn('ort.min.js load note (non-fatal):', e);
+          });
+        })
+        .then(function () {
+          loadDynamicEngine();
+
           if (typeof window.Hands !== 'function' || typeof window.Camera !== 'function') {
             throw new Error('MediaPipe globals missing after script load.');
           }
@@ -1643,7 +1717,7 @@
           });
           hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.7, minTrackingConfidence: 0.7 });
 
-          hands.onResults(function (results) {
+          hands.onResults(async function (results) {
             try {
               if (!handsReady) { handsReady = true; loadingOverlay.classList.add('hidden'); }
               tickFps();
@@ -1671,12 +1745,47 @@
                 // Velocity comes from the RAW (pre-smoothing) wrist position,
                 // matching how training-time velocity was measured.
                 const velocity = motionBuffer.velocityAndPush(rawLandmarks[LM.WRIST].x, rawLandmarks[LM.WRIST].y);
-                const prediction = predictGesture(smoothed, mirrorX, velocity);
-                ingestPrediction(prediction.label, prediction.confidence, prediction.candidates);
+
+                // 1. Preserved static hierarchical classifier
+                const staticResult = predictGesture(smoothed, mirrorX, velocity);
+
+                // 2. Dynamic ONNX Sequence Recognition over rolling 20-frame buffer
+                let dynamicState = null;
+                if (dynamicPredictor && window.SignaDynamic && typeof window.SignaDynamic.normalizeLandmarks63 === 'function') {
+                  const landmarks63 = window.SignaDynamic.normalizeLandmarks63(rawLandmarks, mirrorX);
+                  dynamicState = await dynamicPredictor.processFrame(landmarks63);
+                }
+
+                // 3. Dual Arbitration Engine (Motion Gating)
+                let finalPrediction = staticResult;
+                let activeMode = 'STATIC';
+                let debugText = '';
+
+                if (dynamicState) {
+                  const hasDynamicPred = dynamicState.dynamicPrediction && dynamicState.dynamicPrediction.confidence >= 0.60;
+                  if (dynamicState.isMoving && hasDynamicPred) {
+                    finalPrediction = dynamicState.dynamicPrediction;
+                    activeMode = 'DYNAMIC';
+                    debugText = 'Dynamic: ' + finalPrediction.label + ' (' + Math.round(finalPrediction.confidence * 100) + '%)';
+                  } else {
+                    finalPrediction = staticResult;
+                    activeMode = 'STATIC';
+                    if (dynamicState.dynamicPrediction) {
+                      debugText = 'Motion: ' + dynamicState.motionEnergy.toFixed(3) + ' | Dyn: ' + dynamicState.dynamicPrediction.label + ' (' + Math.round(dynamicState.dynamicPrediction.confidence * 100) + '%)';
+                    } else {
+                      debugText = 'Buffer: ' + dynamicState.bufferLength + '/20 | Motion: ' + dynamicState.motionEnergy.toFixed(3);
+                    }
+                  }
+                }
+
+                renderModeStatus(activeMode, debugText);
+                ingestPrediction(finalPrediction.label, finalPrediction.confidence, finalPrediction.candidates);
               } else {
                 smoother.reset();
                 motionBuffer.reset();
+                if (dynamicPredictor) dynamicPredictor.reset();
                 clearSkeleton();
+                renderModeStatus('STATIC', '');
                 ingestPrediction(null, 0);
               }
             } catch (innerErr) {

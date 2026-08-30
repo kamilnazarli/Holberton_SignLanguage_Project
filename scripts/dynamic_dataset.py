@@ -7,10 +7,8 @@ Handles:
 - Unicode path reading on Windows (imread_unicode)
 - Temporal burst grouping from video frame numbers
 - Missing landmark interpolation & forward-fill
-- Temporal windowing and resampling (configurable sequence_length)
-- Strict 1:1 class-to-folder mapping (no cross-letter merging)
-- Exclusion of fake standalone static repeats from dynamic training
-- Group/burst-aware class-stratified train/val/test splitting
+- Temporal windowing, resampling, and padding (configurable sequence_length)
+- Group/burst-aware train/val/test splitting to prevent data leakage
 - Motion data augmentation (coordinate jitter, speed variation, frame dropping)
 """
 
@@ -18,13 +16,13 @@ import os
 import re
 import sys
 import types
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 for _stream in (sys.stdout, sys.stderr):
     if hasattr(_stream, "reconfigure"):
         _stream.reconfigure(encoding="utf-8", errors="replace")
 
-# Ensure doc_controls is mocked if tensorflow docs are missing on Windows
+# Ensure doc_controls is mocked if tensorflow docs are missing
 if "tensorflow" not in sys.modules:
     tf = types.ModuleType("tensorflow")
     tf_tools = types.ModuleType("tensorflow.tools")
@@ -49,15 +47,21 @@ import mediapipe as mp
 from mediapipe.tasks import python as mp_python
 from mediapipe.tasks.python import vision
 
-CACHE_VERSION = "v2.0_stratified_clean"
-
-# The 7 canonical dynamic classes specified for AzSLD
+# The 7 dynamic classes specified for AzSLD
 DYNAMIC_CLASSES = ["C", "D", "Ö", "Ş", "Ü", "Y", "Z"]
 CLASS_TO_IDX = {cls_name: i for i, cls_name in enumerate(DYNAMIC_CLASSES)}
 IDX_TO_CLASS = {i: cls_name for i, cls_name in enumerate(DYNAMIC_CLASSES)}
 
-# Strict 1:1 folder mapping (no cross-letter folder merging)
-FOLDER_MAPPING = {cls_name: [cls_name] for cls_name in DYNAMIC_CLASSES}
+# Folder aliases in AzSLD dataset (e.g. 'Ç' folder provides motion for 'C'/'Ç' class if needed)
+FOLDER_CANDIDATES = {
+    "C": ["C", "Ç"],
+    "D": ["D"],
+    "Ö": ["Ö"],
+    "Ş": ["Ş", "S"],
+    "Ü": ["Ü"],
+    "Y": ["Y"],
+    "Z": ["Z"],
+}
 
 LM_WRIST = 0
 LM_MIDDLE_MCP = 9
@@ -187,7 +191,6 @@ def resample_sequence(sequence: np.ndarray, target_length: int) -> np.ndarray:
 def discover_bursts(folder_path: str, max_gap: int = 30) -> Tuple[List[List[str]], List[str]]:
     """
     Discovers sequential video bursts and standalone images in a folder.
-    Sequential bursts are sorted chronologically by frame number.
     """
     if not os.path.isdir(folder_path):
         return [], []
@@ -243,63 +246,7 @@ class DynamicDatasetBuilder:
         self.sequence_length = sequence_length
         self.stride = stride
         self.burst_gap_threshold = burst_gap_threshold
-        self._landmarker: Optional[LandmarkerWrapper] = None
-        self.min_detection_confidence = min_detection_confidence
-
-    @property
-    def landmarker(self) -> LandmarkerWrapper:
-        if self._landmarker is None:
-            self._landmarker = LandmarkerWrapper(self.model_path, self.min_detection_confidence)
-        return self._landmarker
-
-    def get_dataset_inventory(self) -> Dict[str, Dict[str, Any]]:
-        """
-        Computes a comprehensive inventory for every dynamic class:
-        - Source folders
-        - Discovered bursts / groups
-        - Standalone images
-        - Usable raw bursts
-        - Number of sequences after windowing
-        """
-        inventory = {}
-        for cls_name in DYNAMIC_CLASSES:
-            folders = FOLDER_MAPPING.get(cls_name, [cls_name])
-            total_standalone = 0
-            all_bursts = []
-
-            for folder_name in folders:
-                folder_path = os.path.join(self.data_dir, folder_name)
-                if not os.path.isdir(folder_path):
-                    continue
-                bursts, standalone = discover_bursts(folder_path, self.burst_gap_threshold)
-                total_standalone += len(standalone)
-                all_bursts.extend(bursts)
-
-            # Usable bursts (at least 3 frames)
-            usable_bursts = [b for b in all_bursts if len(b) >= 3]
-
-            # Calculate windowed sequences
-            total_windows = 0
-            for b in usable_bursts:
-                blen = len(b)
-                if blen >= self.sequence_length:
-                    n_wins = len(range(0, blen - self.sequence_length + 1, self.stride))
-                    if (blen - self.sequence_length) % self.stride != 0:
-                        n_wins += 1
-                    total_windows += n_wins
-                else:
-                    total_windows += 1  # 1 resampled window
-
-            inventory[cls_name] = {
-                "source_folders": folders,
-                "discovered_bursts": len(all_bursts),
-                "standalone_images": total_standalone,
-                "usable_bursts": len(usable_bursts),
-                "sequences_after_windowing": total_windows,
-                "burst_lengths": [len(b) for b in all_bursts],
-            }
-
-        return inventory
+        self.landmarker = LandmarkerWrapper(model_path, min_detection_confidence)
 
     def extract_folder_features(self, folder_path: str) -> Dict[str, Optional[np.ndarray]]:
         """
@@ -325,12 +272,11 @@ class DynamicDatasetBuilder:
         max_sequences: Optional[int] = None,
     ) -> List[Tuple[np.ndarray, int, str]]:
         """
-        Builds genuine temporal sequences for a dynamic class.
+        Builds sequences for a single dynamic class.
         Returns list of (sequence_array_T_63, label_index, group_id).
-        Does NOT repeat standalone single frames.
         """
         label_idx = CLASS_TO_IDX[cls_name]
-        candidate_folders = FOLDER_MAPPING.get(cls_name, [cls_name])
+        candidate_folders = FOLDER_CANDIDATES.get(cls_name, [cls_name])
 
         sequences = []
         group_counter = 0
@@ -359,10 +305,18 @@ class DynamicDatasetBuilder:
                         tail_win = np.array(valid_feats[-self.sequence_length:], dtype=np.float32)
                         sequences.append((tail_win, label_idx, group_id))
                 elif burst_len >= 3:
-                    # Resample genuine temporal trajectory along the time axis
                     burst_mat = np.array(valid_feats, dtype=np.float32)
                     resampled = resample_sequence(burst_mat, self.sequence_length)
                     sequences.append((resampled, label_idx, group_id))
+
+            if len(sequences) < 20 and standalone:
+                for s_fn in standalone:
+                    feat = feat_cache.get(s_fn)
+                    if feat is not None:
+                        group_id = f"{cls_name}_standalone_{group_counter}"
+                        group_counter += 1
+                        seq = np.repeat(feat[np.newaxis, :], self.sequence_length, axis=0).astype(np.float32)
+                        sequences.append((seq, label_idx, group_id))
 
         if max_sequences and len(sequences) > max_sequences:
             rng = np.random.RandomState(42)
@@ -373,7 +327,7 @@ class DynamicDatasetBuilder:
 
     def build_all(
         self,
-        max_per_class: Optional[int] = 350,
+        max_per_class: Optional[int] = 300,
     ) -> Tuple[np.ndarray, np.ndarray, List[str]]:
         """
         Builds the entire dataset across all 7 dynamic classes.
@@ -382,10 +336,10 @@ class DynamicDatasetBuilder:
         y_all = []
         groups_all = []
 
-        print(f"Building dynamic dataset for classes: {DYNAMIC_CLASSES} (seq_len={self.sequence_length})...", flush=True)
+        print(f"Building dynamic dataset for classes: {DYNAMIC_CLASSES} (seq_len={self.sequence_length})...")
         for cls_name in DYNAMIC_CLASSES:
             seqs = self.build_sequences_for_class(cls_name, max_sequences=max_per_class)
-            print(f"  Class '{cls_name}': generated {len(seqs)} sequences across unique groups", flush=True)
+            print(f"  Class '{cls_name}': generated {len(seqs)} sequences across unique groups")
             for seq, label_idx, grp in seqs:
                 X_all.append(seq)
                 y_all.append(label_idx)
@@ -436,25 +390,3 @@ def augment_sequence(
 
     return seq.astype(np.float32)
 
-
-if __name__ == "__main__":
-    builder = DynamicDatasetBuilder()
-    inv = builder.get_dataset_inventory()
-    print("=========================================================================")
-    print("AzSL Dynamic Classes — Source Dataset Inventory")
-    print("=========================================================================")
-    header = "%-6s | %-12s | %-16s | %-16s | %-14s | %-18s" % (
-        "Class", "Folders", "Discovered Bursts", "Standalone Images", "Usable Bursts", "Windowed Sequences"
-    )
-    print(header)
-    print("-" * 88)
-    for c, data in inv.items():
-        print("%-6s | %-12s | %-16d | %-16d | %-14d | %-18d" % (
-            c,
-            ",".join(data["source_folders"]),
-            data["discovered_bursts"],
-            data["standalone_images"],
-            data["usable_bursts"],
-            data["sequences_after_windowing"],
-        ))
-    print("=========================================================================")
