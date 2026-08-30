@@ -7,12 +7,24 @@
  * Features:
  * - 20-frame rolling landmark buffer (20 x 63 = 1260 features)
  * - Exact MediaPipe 21-landmark normalization (wrist-origin, middle-MCP scale, left-hand mirroring)
- * - Motion energy gating (differentiates stationary static letters from dynamic trajectories)
- * - Temporal stability smoothing (prevents per-frame prediction flicker)
+ * - Calibrated motion energy gating (threshold = 0.020)
+ * - Dynamic hangover state machine: prevents abrupt fallback to static letters during stroke deceleration
+ * - Dedicated rapid dynamic commit window with cooldown refractory filtering
  * - Preserves the exact 7-class label mapping: ["C", "D", "Ö", "Ş", "Ü", "Y", "Z"]
  */
 
 export const DYNAMIC_CLASSES = ['C', 'D', 'Ö', 'Ş', 'Ü', 'Y', 'Z'];
+
+// Configurable constants
+export const DYNAMIC_CONFIG = {
+  MOTION_THRESHOLD: 0.020,     // Motion energy threshold for dynamic gesture activation
+  MIN_CONFIDENCE: 0.60,       // Minimum dynamic model confidence
+  HANGOVER_FRAMES: 12,        // ~400ms at 30 FPS: frames to maintain dynamic mode after motion slows
+  COOLDOWN_FRAMES: 18,        // ~600ms at 30 FPS: refractory period after committing a dynamic letter
+  SEQUENCE_LENGTH: 20,        // Input sequence length (20 frames x 63 = 1260 values)
+  STABILITY_WINDOW: 3,        // Prediction temporal stability filter window size
+  DYNAMIC_COMMIT_HOLD_MS: 380,// Fast commit window for dynamic gestures (vs 1200ms for static)
+};
 
 // Landmark indices matching MediaPipe Hands
 const LM = {
@@ -83,20 +95,28 @@ export function calculateMotionEnergy(curr, prev) {
 }
 
 /**
- * Streaming Dynamic Sign Predictor for live webcam inference.
+ * Streaming Dynamic Sign Predictor with Hangover State Machine.
  */
 export class DynamicSignPredictor {
   constructor(options = {}) {
     this.modelUrl = options.modelUrl || '/models/dynamic_model.onnx';
-    this.sequenceLength = options.sequenceLength || 20;
-    this.motionThreshold = options.motionThreshold || 0.038;
-    this.minConfidence = options.minConfidence || 0.60;
-    this.stabilityWindow = options.stabilityWindow || 3;
+    this.sequenceLength = options.sequenceLength || DYNAMIC_CONFIG.SEQUENCE_LENGTH;
+    this.motionThreshold = options.motionThreshold !== undefined ? options.motionThreshold : DYNAMIC_CONFIG.MOTION_THRESHOLD;
+    this.minConfidence = options.minConfidence !== undefined ? options.minConfidence : DYNAMIC_CONFIG.MIN_CONFIDENCE;
+    this.hangoverFrames = options.hangoverFrames !== undefined ? options.hangoverFrames : DYNAMIC_CONFIG.HANGOVER_FRAMES;
+    this.cooldownFrames = options.cooldownFrames !== undefined ? options.cooldownFrames : DYNAMIC_CONFIG.COOLDOWN_FRAMES;
+    this.stabilityWindow = options.stabilityWindow || DYNAMIC_CONFIG.STABILITY_WINDOW;
 
     this.session = null;
     this.isModelLoading = false;
     this.modelReady = false;
     this.modelError = null;
+
+    // State machine tracking
+    this.state = 'IDLE'; // 'IDLE', 'MOTION', 'DYNAMIC_ACTIVE', 'DYNAMIC_HANGOVER', 'COOLDOWN'
+    this.hangoverCounter = 0;
+    this.cooldownCounter = 0;
+    this.lastPrediction = null;
 
     // Rolling 20-frame landmark buffer (each element is Float32Array(63))
     this.landmarkBuffer = [];
@@ -146,21 +166,39 @@ export class DynamicSignPredictor {
    * Resets temporal state buffers.
    */
   reset() {
+    this.state = 'IDLE';
+    this.hangoverCounter = 0;
+    this.cooldownCounter = 0;
+    this.lastPrediction = null;
     this.landmarkBuffer = [];
     this.recentEnergies = [];
     this.recentPredictions = [];
   }
 
   /**
-   * Pushes a new frame's 63D normalized landmarks and returns analysis.
+   * Triggers cooldown period after committing a dynamic letter.
+   */
+  triggerCooldown() {
+    this.state = 'COOLDOWN';
+    this.cooldownCounter = this.cooldownFrames;
+    this.hangoverCounter = 0;
+    this.lastPrediction = null;
+    this.recentPredictions = [];
+  }
+
+  /**
+   * Pushes a new frame's 63D normalized landmarks and executes state-machine evaluation.
    *
    * @param {Float32Array} landmarks63 63D normalized landmarks of current frame
    * @returns {Promise<{
    *   isMoving: boolean,
+   *   inHangover: boolean,
+   *   isDynamic: boolean,
+   *   state: string,
    *   motionEnergy: number,
    *   bufferFilled: boolean,
    *   bufferLength: number,
-   *   dynamicPrediction: { label: string, confidence: number, candidates: Array<{label: string, confidence: number}> } | null
+   *   dynamicPrediction: { label: string, confidence: number, rawConfidence: number, candidates: Array<{label: string, confidence: number}> } | null
    * }>}
    */
   async processFrame(landmarks63) {
@@ -168,9 +206,27 @@ export class DynamicSignPredictor {
       this.reset();
       return {
         isMoving: false,
+        inHangover: false,
+        isDynamic: false,
+        state: 'IDLE',
         motionEnergy: 0,
         bufferFilled: false,
         bufferLength: 0,
+        dynamicPrediction: null,
+      };
+    }
+
+    // Refractory cooldown handling
+    if (this.cooldownCounter > 0) {
+      this.cooldownCounter--;
+      return {
+        isMoving: false,
+        inHangover: false,
+        isDynamic: false,
+        state: 'COOLDOWN',
+        motionEnergy: 0,
+        bufferFilled: this.landmarkBuffer.length >= this.sequenceLength,
+        bufferLength: this.landmarkBuffer.length,
         dynamicPrediction: null,
       };
     }
@@ -197,12 +253,37 @@ export class DynamicSignPredictor {
     const isMoving = avgEnergy >= this.motionThreshold;
     const bufferFilled = this.landmarkBuffer.length >= this.sequenceLength;
 
-    let dynamicPrediction = null;
+    // State machine & Hangover management
+    let inHangover = false;
+    if (isMoving) {
+      this.hangoverCounter = this.hangoverFrames; // Refresh hangover timer
+      this.state = 'MOTION';
+    } else {
+      if (this.hangoverCounter > 0) {
+        this.hangoverCounter--;
+        inHangover = true;
+        this.state = 'DYNAMIC_HANGOVER';
+      } else {
+        this.state = 'IDLE';
+      }
+    }
 
-    // Run inference when buffer is full and model is ready
-    if (bufferFilled && this.modelReady && this.session) {
+    let dynamicPrediction = null;
+    let isDynamic = false;
+
+    // Run inference when buffer is full and motion is active OR within hangover period
+    if (bufferFilled && this.modelReady && this.session && (isMoving || inHangover)) {
       try {
         dynamicPrediction = await this._runInference();
+        if (dynamicPrediction && dynamicPrediction.confidence >= this.minConfidence) {
+          isDynamic = true;
+          this.lastPrediction = dynamicPrediction;
+          if (!inHangover) this.state = 'DYNAMIC_ACTIVE';
+        } else if (inHangover && this.lastPrediction) {
+          // If in hangover and model is transitioning, carry over the peak dynamic candidate
+          dynamicPrediction = this.lastPrediction;
+          isDynamic = true;
+        }
       } catch (err) {
         console.warn('Dynamic inference error:', err);
       }
@@ -210,6 +291,9 @@ export class DynamicSignPredictor {
 
     return {
       isMoving,
+      inHangover,
+      isDynamic,
+      state: this.state,
       motionEnergy: avgEnergy,
       bufferFilled,
       bufferLength: this.landmarkBuffer.length,
@@ -251,7 +335,7 @@ export class DynamicSignPredictor {
     // Compute smoothed confidence for the top candidate across recent predictions
     const sameLabelMatches = this.recentPredictions.filter((p) => p.label === topCandidate.label);
     const stabilityRatio = sameLabelMatches.length / this.recentPredictions.length;
-    const smoothedConfidence = topCandidate.confidence * (0.6 + 0.4 * stabilityRatio);
+    const smoothedConfidence = topCandidate.confidence * (0.65 + 0.35 * stabilityRatio);
 
     return {
       label: topCandidate.label,
@@ -266,9 +350,9 @@ export class DynamicSignPredictor {
 if (typeof window !== 'undefined') {
   window.SignaDynamic = {
     DYNAMIC_CLASSES,
+    DYNAMIC_CONFIG,
     normalizeLandmarks63,
     calculateMotionEnergy,
     DynamicSignPredictor,
   };
 }
-

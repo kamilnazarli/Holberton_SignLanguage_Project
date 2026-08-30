@@ -869,6 +869,7 @@
 
     // ---- config ----
     const COMMIT_HOLD_MS = 1200;
+    const DYNAMIC_COMMIT_HOLD_MS = 380; // Fast dedicated commit window for dynamic gestures
     const EMA_ALPHA = 0.4;
     const HISTORY_KEY = 'signa.history.v1';
     const MAX_HISTORY_ENTRIES = 100;
@@ -881,6 +882,7 @@
       alreadyCommitted: false,
       demoMode: false,
       lastLabel: undefined,
+      isDynamic: false,
     };
     const smoother = new LandmarkSmoother(EMA_ALPHA);
     const motionBuffer = new MotionBuffer(10);
@@ -967,13 +969,24 @@
       if (color) progressRing.setAttribute('stroke', color);
     }
 
-    function renderPrediction(label, confidence, progress, candidates) {
+    function renderPrediction(label, confidence, progress, candidates, isDynamic) {
       const meta = label ? labelMeta(label) : null;
       liveLetterEl.textContent = meta ? meta.symbol : '–';
-      predictionLabel.textContent = meta ? ('Holding "' + meta.friendly + '"') : 'Awaiting gesture…';
+      if (meta) {
+        predictionLabel.textContent = isDynamic ? ('Dynamic "' + meta.friendly + '"') : ('Holding "' + meta.friendly + '"');
+      } else {
+        predictionLabel.textContent = 'Awaiting gesture…';
+      }
       confidenceValue.textContent = Math.round(confidence * 100) + '%';
       confidenceBar.style.width = Math.round(confidence * 100) + '%';
-      const ringColor = progress >= 1 ? '#fbbf24' : '#2dd4bf';
+      let ringColor;
+      if (progress >= 1) {
+        ringColor = '#fbbf24'; // Amber committed
+      } else if (isDynamic) {
+        ringColor = '#a78bfa'; // Violet dynamic
+      } else {
+        ringColor = '#2dd4bf'; // Teal static
+      }
       setProgress(label ? progress : 0, ringColor);
 
       const second = candidates && candidates[1];
@@ -1447,7 +1460,7 @@
       flashCommit();
     }
 
-    function ingestPrediction(label, confidence, candidates) {
+    function ingestPrediction(label, confidence, candidates, isDynamic) {
       const now = performance.now();
 
       if (label !== null && label === state.lastLabel) {
@@ -1456,25 +1469,34 @@
         state.lastLabel = label;
         state.holdStartTime = label !== null ? now : null;
         state.alreadyCommitted = false;
+        state.isDynamic = !!isDynamic;
       }
+
+      // Fast dedicated commit hold for dynamic gestures (380ms), preserved 1200ms for static
+      const requiredHold = isDynamic ? DYNAMIC_COMMIT_HOLD_MS : COMMIT_HOLD_MS;
 
       let progress = 0;
       if (label !== null && state.holdStartTime !== null) {
-        progress = Math.min((now - state.holdStartTime) / COMMIT_HOLD_MS, 1);
+        progress = Math.min((now - state.holdStartTime) / requiredHold, 1);
       }
 
       if (label !== null && progress >= 1 && !state.alreadyCommitted) {
         state.alreadyCommitted = true;
         commitGesture(label, candidates);
+        if (isDynamic && dynamicPredictor) {
+          dynamicPredictor.triggerCooldown();
+          resetHoldState();
+        }
       }
 
-      renderPrediction(label, confidence, progress, candidates);
+      renderPrediction(label, confidence, progress, candidates, isDynamic);
     }
 
     function resetHoldState() {
       state.lastLabel = undefined;
       state.holdStartTime = null;
       state.alreadyCommitted = false;
+      state.isDynamic = false;
     }
 
     // ------------------------------------------------------------------ //
@@ -1756,21 +1778,26 @@
                   dynamicState = await dynamicPredictor.processFrame(landmarks63);
                 }
 
-                // 3. Dual Arbitration Engine (Motion Gating)
+                // 3. Dual Arbitration Engine (Motion Gating with Hangover State Machine)
                 let finalPrediction = staticResult;
                 let activeMode = 'STATIC';
+                let isDynamic = false;
                 let debugText = '';
 
                 if (dynamicState) {
-                  const hasDynamicPred = dynamicState.dynamicPrediction && dynamicState.dynamicPrediction.confidence >= 0.60;
-                  if (dynamicState.isMoving && hasDynamicPred) {
+                  if (dynamicState.isDynamic && dynamicState.dynamicPrediction) {
                     finalPrediction = dynamicState.dynamicPrediction;
                     activeMode = 'DYNAMIC';
-                    debugText = 'Dynamic: ' + finalPrediction.label + ' (' + Math.round(finalPrediction.confidence * 100) + '%)';
+                    isDynamic = true;
+                    const hangoverNote = dynamicState.inHangover ? ' [decel]' : '';
+                    debugText = 'Dynamic: ' + finalPrediction.label + ' (' + Math.round(finalPrediction.confidence * 100) + '%)' + hangoverNote;
                   } else {
                     finalPrediction = staticResult;
                     activeMode = 'STATIC';
-                    if (dynamicState.dynamicPrediction) {
+                    isDynamic = false;
+                    if (dynamicState.state === 'COOLDOWN') {
+                      debugText = 'Cooldown refractory';
+                    } else if (dynamicState.dynamicPrediction) {
                       debugText = 'Motion: ' + dynamicState.motionEnergy.toFixed(3) + ' | Dyn: ' + dynamicState.dynamicPrediction.label + ' (' + Math.round(dynamicState.dynamicPrediction.confidence * 100) + '%)';
                     } else {
                       debugText = 'Buffer: ' + dynamicState.bufferLength + '/20 | Motion: ' + dynamicState.motionEnergy.toFixed(3);
@@ -1779,14 +1806,14 @@
                 }
 
                 renderModeStatus(activeMode, debugText);
-                ingestPrediction(finalPrediction.label, finalPrediction.confidence, finalPrediction.candidates);
+                ingestPrediction(finalPrediction.label, finalPrediction.confidence, finalPrediction.candidates, isDynamic);
               } else {
                 smoother.reset();
                 motionBuffer.reset();
                 if (dynamicPredictor) dynamicPredictor.reset();
                 clearSkeleton();
                 renderModeStatus('STATIC', '');
-                ingestPrediction(null, 0);
+                ingestPrediction(null, 0, [], false);
               }
             } catch (innerErr) {
               console.error('Hand-results processing error (non-fatal):', innerErr);
