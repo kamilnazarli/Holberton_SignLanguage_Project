@@ -875,6 +875,12 @@
     const MAX_HISTORY_ENTRIES = 100;
     const AZSL_MODEL_URL = '/models/azsl_hierarchical_model.json';
 
+    // The 25 static-only letters in AzSLD that have NO representation in the 7-class dynamic model
+    const STATIC_ONLY_LETTERS = new Set([
+      'A', 'B', 'E', 'Ə', 'F', 'G', 'Ğ', 'H', 'X', 'I', 'İ',
+      'J', 'K', 'Q', 'L', 'M', 'N', 'O', 'P', 'R', 'S', 'T', 'U', 'V'
+    ]);
+
     // ---- state ----
     const state = {
       handDetected: false,
@@ -1778,14 +1784,21 @@
                   dynamicState = await dynamicPredictor.processFrame(landmarks63);
                 }
 
-                // 3. Dual Arbitration Engine (Motion Gating with Hangover State Machine)
+                // 3. Dual Arbitration Engine (Protected Routing + Cumulative Motion Gating)
                 let finalPrediction = staticResult;
                 let activeMode = 'STATIC';
                 let isDynamic = false;
                 let debugText = '';
 
                 if (dynamicState) {
-                  if (dynamicState.isDynamic && dynamicState.dynamicPrediction) {
+                  // Guard: Protect static-only letters (e.g. 'M', 'B', 'K', 'A', 'S') from being
+                  // hijacked by the 7-class dynamic model unless there is a massive dynamic gesture (> 10.0 displacement).
+                  const isStaticProtected = staticResult &&
+                    staticResult.confidence >= 0.70 &&
+                    STATIC_ONLY_LETTERS.has(staticResult.label) &&
+                    dynamicState.cumulativeDisplacement < 10.0;
+
+                  if (dynamicState.isDynamic && dynamicState.dynamicPrediction && !isStaticProtected) {
                     finalPrediction = dynamicState.dynamicPrediction;
                     activeMode = 'DYNAMIC';
                     isDynamic = true;
@@ -1798,9 +1811,9 @@
                     if (dynamicState.state === 'COOLDOWN') {
                       debugText = 'Cooldown refractory';
                     } else if (dynamicState.dynamicPrediction) {
-                      debugText = 'Motion: ' + dynamicState.motionEnergy.toFixed(3) + ' | Dyn: ' + dynamicState.dynamicPrediction.label + ' (' + Math.round(dynamicState.dynamicPrediction.confidence * 100) + '%)';
+                      debugText = 'Mot: ' + dynamicState.motionEnergy.toFixed(3) + ' | Cum: ' + (dynamicState.cumulativeDisplacement || 0).toFixed(1) + ' | Dyn: ' + dynamicState.dynamicPrediction.label;
                     } else {
-                      debugText = 'Buffer: ' + dynamicState.bufferLength + '/20 | Motion: ' + dynamicState.motionEnergy.toFixed(3);
+                      debugText = 'Buffer: ' + dynamicState.bufferLength + '/20 | Mot: ' + dynamicState.motionEnergy.toFixed(3);
                     }
                   }
                 }

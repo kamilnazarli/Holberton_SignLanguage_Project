@@ -7,7 +7,7 @@
  * Features:
  * - 20-frame rolling landmark buffer (20 x 63 = 1260 features)
  * - Exact MediaPipe 21-landmark normalization (wrist-origin, middle-MCP scale, left-hand mirroring)
- * - Calibrated motion energy gating (threshold = 0.020)
+ * - Dual-metric motion gate: frame-to-frame delta + 20-frame cumulative trajectory displacement
  * - Dynamic hangover state machine: prevents abrupt fallback to static letters during stroke deceleration
  * - Dedicated rapid dynamic commit window with cooldown refractory filtering
  * - Preserves the exact 7-class label mapping: ["C", "D", "Ö", "Ş", "Ü", "Y", "Z"]
@@ -17,13 +17,14 @@ export const DYNAMIC_CLASSES = ['C', 'D', 'Ö', 'Ş', 'Ü', 'Y', 'Z'];
 
 // Configurable constants
 export const DYNAMIC_CONFIG = {
-  MOTION_THRESHOLD: 0.020,     // Motion energy threshold for dynamic gesture activation
-  MIN_CONFIDENCE: 0.60,       // Minimum dynamic model confidence
-  HANGOVER_FRAMES: 12,        // ~400ms at 30 FPS: frames to maintain dynamic mode after motion slows
-  COOLDOWN_FRAMES: 18,        // ~600ms at 30 FPS: refractory period after committing a dynamic letter
-  SEQUENCE_LENGTH: 20,        // Input sequence length (20 frames x 63 = 1260 values)
-  STABILITY_WINDOW: 3,        // Prediction temporal stability filter window size
-  DYNAMIC_COMMIT_HOLD_MS: 380,// Fast commit window for dynamic gestures (vs 1200ms for static)
+  MOTION_THRESHOLD: 0.020,             // Frame-to-frame delta threshold for active motion
+  CUMULATIVE_MOTION_THRESHOLD: 4.8,    // Cumulative Euclidean landmark displacement across 20-frame buffer
+  MIN_CONFIDENCE: 0.65,               // Minimum dynamic model confidence
+  HANGOVER_FRAMES: 10,                // ~330ms at 30 FPS: frames to maintain dynamic mode after motion slows
+  COOLDOWN_FRAMES: 18,                // ~600ms at 30 FPS: refractory period after committing a dynamic letter
+  SEQUENCE_LENGTH: 20,                // Input sequence length (20 frames x 63 = 1260 values)
+  STABILITY_WINDOW: 3,                // Prediction temporal stability filter window size
+  DYNAMIC_COMMIT_HOLD_MS: 380,        // Fast commit window for dynamic gestures (vs 1200ms for static)
 };
 
 // Landmark indices matching MediaPipe Hands
@@ -95,13 +96,38 @@ export function calculateMotionEnergy(curr, prev) {
 }
 
 /**
- * Streaming Dynamic Sign Predictor with Hangover State Machine.
+ * Computes cumulative Euclidean displacement across the entire 20-frame buffer.
+ * Real dynamic trajectories exhibit cumulative displacement >= 5.0 to 70.0+,
+ * whereas stationary hands with natural tremor/noise remain < 3.0.
+ *
+ * @param {Array<Float32Array>} buffer Array of 63D normalized frames
+ * @returns {number} Total cumulative trajectory displacement
+ */
+export function calculateCumulativeDisplacement(buffer) {
+  if (!buffer || buffer.length < 2) return 0;
+  let total = 0;
+  for (let t = 1; t < buffer.length; t++) {
+    let sumSq = 0;
+    const curr = buffer[t];
+    const prev = buffer[t - 1];
+    for (let i = 0; i < 63; i++) {
+      const diff = curr[i] - prev[i];
+      sumSq += diff * diff;
+    }
+    total += Math.sqrt(sumSq);
+  }
+  return total;
+}
+
+/**
+ * Streaming Dynamic Sign Predictor with Cumulative Motion Gating and Hangover State Machine.
  */
 export class DynamicSignPredictor {
   constructor(options = {}) {
     this.modelUrl = options.modelUrl || '/models/dynamic_model.onnx';
     this.sequenceLength = options.sequenceLength || DYNAMIC_CONFIG.SEQUENCE_LENGTH;
     this.motionThreshold = options.motionThreshold !== undefined ? options.motionThreshold : DYNAMIC_CONFIG.MOTION_THRESHOLD;
+    this.cumulativeThreshold = options.cumulativeThreshold !== undefined ? options.cumulativeThreshold : DYNAMIC_CONFIG.CUMULATIVE_MOTION_THRESHOLD;
     this.minConfidence = options.minConfidence !== undefined ? options.minConfidence : DYNAMIC_CONFIG.MIN_CONFIDENCE;
     this.hangoverFrames = options.hangoverFrames !== undefined ? options.hangoverFrames : DYNAMIC_CONFIG.HANGOVER_FRAMES;
     this.cooldownFrames = options.cooldownFrames !== undefined ? options.cooldownFrames : DYNAMIC_CONFIG.COOLDOWN_FRAMES;
@@ -118,7 +144,7 @@ export class DynamicSignPredictor {
     this.cooldownCounter = 0;
     this.lastPrediction = null;
 
-    // Rolling 20-frame landmark buffer (each element is Float32Array(63))
+    // Rolling landmark buffer (each element is Float32Array(63))
     this.landmarkBuffer = [];
     this.recentEnergies = [];
     this.recentPredictions = [];
@@ -192,10 +218,12 @@ export class DynamicSignPredictor {
    * @param {Float32Array} landmarks63 63D normalized landmarks of current frame
    * @returns {Promise<{
    *   isMoving: boolean,
+   *   hasTrajectory: boolean,
    *   inHangover: boolean,
    *   isDynamic: boolean,
    *   state: string,
    *   motionEnergy: number,
+   *   cumulativeDisplacement: number,
    *   bufferFilled: boolean,
    *   bufferLength: number,
    *   dynamicPrediction: { label: string, confidence: number, rawConfidence: number, candidates: Array<{label: string, confidence: number}> } | null
@@ -206,10 +234,12 @@ export class DynamicSignPredictor {
       this.reset();
       return {
         isMoving: false,
+        hasTrajectory: false,
         inHangover: false,
         isDynamic: false,
         state: 'IDLE',
         motionEnergy: 0,
+        cumulativeDisplacement: 0,
         bufferFilled: false,
         bufferLength: 0,
         dynamicPrediction: null,
@@ -221,10 +251,12 @@ export class DynamicSignPredictor {
       this.cooldownCounter--;
       return {
         isMoving: false,
+        hasTrajectory: false,
         inHangover: false,
         isDynamic: false,
         state: 'COOLDOWN',
         motionEnergy: 0,
+        cumulativeDisplacement: 0,
         bufferFilled: this.landmarkBuffer.length >= this.sequenceLength,
         bufferLength: this.landmarkBuffer.length,
         dynamicPrediction: null,
@@ -248,14 +280,20 @@ export class DynamicSignPredictor {
       this.recentEnergies.shift();
     }
 
-    // Average motion energy over recent frames
+    // Metric 1: Average frame-to-frame delta over recent frames
     const avgEnergy = this.recentEnergies.reduce((a, b) => a + b, 0) / (this.recentEnergies.length || 1);
     const isMoving = avgEnergy >= this.motionThreshold;
+
+    // Metric 2: Cumulative trajectory displacement across the 20-frame buffer
+    const cumulativeDisplacement = calculateCumulativeDisplacement(this.landmarkBuffer);
     const bufferFilled = this.landmarkBuffer.length >= this.sequenceLength;
+
+    // True dynamic trajectory requires BOTH recent frame motion and genuine window displacement
+    const hasTrajectory = bufferFilled && cumulativeDisplacement >= this.cumulativeThreshold && isMoving;
 
     // State machine & Hangover management
     let inHangover = false;
-    if (isMoving) {
+    if (hasTrajectory) {
       this.hangoverCounter = this.hangoverFrames; // Refresh hangover timer
       this.state = 'MOTION';
     } else {
@@ -271,8 +309,8 @@ export class DynamicSignPredictor {
     let dynamicPrediction = null;
     let isDynamic = false;
 
-    // Run inference when buffer is full and motion is active OR within hangover period
-    if (bufferFilled && this.modelReady && this.session && (isMoving || inHangover)) {
+    // Run inference only when buffer is full AND genuine trajectory or hangover is active
+    if (bufferFilled && this.modelReady && this.session && (hasTrajectory || inHangover)) {
       try {
         dynamicPrediction = await this._runInference();
         if (dynamicPrediction && dynamicPrediction.confidence >= this.minConfidence) {
@@ -280,7 +318,7 @@ export class DynamicSignPredictor {
           this.lastPrediction = dynamicPrediction;
           if (!inHangover) this.state = 'DYNAMIC_ACTIVE';
         } else if (inHangover && this.lastPrediction) {
-          // If in hangover and model is transitioning, carry over the peak dynamic candidate
+          // If in hangover during landing phase, carry over the stabilized dynamic candidate
           dynamicPrediction = this.lastPrediction;
           isDynamic = true;
         }
@@ -291,10 +329,12 @@ export class DynamicSignPredictor {
 
     return {
       isMoving,
+      hasTrajectory,
       inHangover,
       isDynamic,
       state: this.state,
       motionEnergy: avgEnergy,
+      cumulativeDisplacement,
       bufferFilled,
       bufferLength: this.landmarkBuffer.length,
       dynamicPrediction,
@@ -353,6 +393,7 @@ if (typeof window !== 'undefined') {
     DYNAMIC_CONFIG,
     normalizeLandmarks63,
     calculateMotionEnergy,
+    calculateCumulativeDisplacement,
     DynamicSignPredictor,
   };
 }
