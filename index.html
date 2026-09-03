@@ -795,7 +795,6 @@
     const letterResult = classifyHierarchical(coords, v);
 
     if (letterResult.confidence >= MIN_CONFIDENCE) return letterResult;
-    return { label: null, confidence: letterResult.confidence, candidates: [] };
     return { label: null, confidence: letterResult.confidence, candidates: [], distribution: {} };
   }
 
@@ -1526,11 +1525,6 @@
     // ------------------------------------------------------------------ //
     // Commit / hold-to-confirm pipeline — shared by camera + demo mode
     // ------------------------------------------------------------------ //
-    function commitGesture(label, candidates) {
-      const finalLabel = rescoreWithBigram(label, candidates, currentWord);
-      addLetter(labelMeta(finalLabel).symbol);
-      chime();
-      flashCommit();
     function commitGesture(label, candidates, distribution) {
       if (state.beamSearchMode) {
         const probDict = {};
@@ -1563,7 +1557,6 @@
       }
     }
 
-    function ingestPrediction(label, confidence, candidates, isDynamic) {
     function renderBeamCandidates(hyps) {
       if (!beamCandidatesRow || !beamCandidatesList) return;
       if (!state.beamSearchMode || !hyps || hyps.length === 0) {
@@ -1613,7 +1606,6 @@
 
       if (label !== null && progress >= 1 && !state.alreadyCommitted) {
         state.alreadyCommitted = true;
-        commitGesture(label, candidates);
         commitGesture(label, candidates, distribution);
         if (isDynamic && dynamicPredictor) {
           dynamicPredictor.triggerCooldown();
@@ -1974,7 +1966,6 @@
                 }
 
                 renderModeStatus(activeMode, debugText);
-                ingestPrediction(finalPrediction.label, finalPrediction.confidence, finalPrediction.candidates, isDynamic);
                 ingestPrediction(finalPrediction.label, finalPrediction.confidence, finalPrediction.candidates, isDynamic, finalPrediction.distribution);
               } else {
                 smoother.reset();
