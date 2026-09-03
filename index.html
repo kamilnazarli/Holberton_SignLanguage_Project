@@ -1169,7 +1169,7 @@
           beamWidth: 5,
           lmWeight: 0.6,
           lexiconWordBonus: 3.0,
-          strictLexiconPrefix: true,
+          lexiconMode: 'soft', // 'none', 'hard', 'soft'
         }, options);
         this.trie = new LexiconTrie(AZ_LEXICON);
         this.reset();
@@ -1183,6 +1183,7 @@
       addStep(probDict) {
         this.stepObservations.push(probDict);
         const B = this.options.beamWidth;
+        const mode = this.options.lexiconMode;
         const candidates = [];
 
         const tokens = Object.keys(probDict).map(function (k) { return { label: k, prob: probDict[k] }; });
@@ -1202,8 +1203,8 @@
             const pLm = bigramProb(prevChar, item.label);
             const newLmScore = hyp.lmScore + Math.log(Math.max(pLm, 1e-12));
 
-            const isPre = this.trie.isValidPrefix(newSeq);
-            if (this.options.strictLexiconPrefix && !isPre) {
+            // Soft lexicon: NEVER prune prefixes; Hard lexicon: prune if invalid prefix
+            if (mode === 'hard' && !this.trie.isValidPrefix(newSeq)) {
               continue;
             }
 
@@ -1238,10 +1239,11 @@
 
       getHypotheses() {
         const self = this;
+        const mode = this.options.lexiconMode;
         return this.currentBeam.map(function (hyp) {
           const isWord = self.trie.isValidWord(hyp.sequence);
           const isPre = self.trie.isValidPrefix(hyp.sequence);
-          const bonus = isWord ? self.options.lexiconWordBonus : 0;
+          const bonus = (mode === 'soft' || mode === 'hard') && isWord ? self.options.lexiconWordBonus : 0;
           return {
             sequence: hyp.sequence,
             score: hyp.score + bonus,
@@ -1257,7 +1259,7 @@
       }
     }
 
-    const wordBeamDecoder = new WordBeamSearchDecoder({ beamWidth: 5, lmWeight: 0.6, lexiconWordBonus: 3.0 });
+    const wordBeamDecoder = new WordBeamSearchDecoder({ beamWidth: 5, lmWeight: 0.6, lexiconWordBonus: 3.0, lexiconMode: 'soft' });
 
     function clearSentence() {
       const text = getFullText();

@@ -1,0 +1,1279 @@
+{
+  "timestamp": "2026-09-03T17:33:49Z",
+  "summary": {
+    "total_words_evaluated_per_scenario": 150,
+    "iv_words_count": 75,
+    "oov_words_count": 75,
+    "samples_per_word": 5,
+    "beam_width": 5,
+    "beta_values_tested": [
+      0.0,
+      0.5,
+      1.0,
+      2.0,
+      3.0
+    ],
+    "scenario_1_clean": {
+      "iv_metrics": {
+        "greedy": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.0279
+        },
+        "beam_bigram": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.4398
+        },
+        "beam_hard_lexicon": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.3944
+        },
+        "soft_beta_0.0": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.4153
+        },
+        "soft_beta_0.5": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.3983
+        },
+        "soft_beta_1.0": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.399
+        },
+        "soft_beta_2.0": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.3911
+        },
+        "soft_beta_3.0": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.4114
+        }
+      },
+      "oov_metrics": {
+        "greedy": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.0307
+        },
+        "beam_bigram": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.7134
+        },
+        "beam_hard_lexicon": {
+          "word_acc": 6.67,
+          "char_acc": 62.28,
+          "wer": 93.33,
+          "cer": 37.72,
+          "rescued_count": 0,
+          "hurt_count": 70,
+          "avg_latency_ms": 0.5944
+        },
+        "soft_beta_0.0": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.6645
+        },
+        "soft_beta_0.5": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.6586
+        },
+        "soft_beta_1.0": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.7169
+        },
+        "soft_beta_2.0": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.7019
+        },
+        "soft_beta_3.0": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.6615
+        }
+      },
+      "overall_metrics": {
+        "greedy": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.0293
+        },
+        "beam_bigram": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.5766
+        },
+        "beam_hard_lexicon": {
+          "word_acc": 53.33,
+          "char_acc": 78.25,
+          "wer": 46.67,
+          "cer": 21.75,
+          "rescued_count": 0,
+          "hurt_count": 70,
+          "avg_latency_ms": 0.4944
+        },
+        "soft_beta_0.0": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.5399
+        },
+        "soft_beta_0.5": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.5285
+        },
+        "soft_beta_1.0": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.558
+        },
+        "soft_beta_2.0": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.5465
+        },
+        "soft_beta_3.0": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.5365
+        }
+      },
+      "oov_details": {
+        "QƏLƏM": {
+          "samples_evaluated": 5,
+          "greedy_correct": 5,
+          "beam_bigram_correct": 5,
+          "hard_lexicon_correct": 0,
+          "soft_lexicon_correct": {
+            "beta_0.0": 5,
+            "beta_0.5": 5,
+            "beta_1.0": 5,
+            "beta_2.0": 5,
+            "beta_3.0": 5
+          },
+          "hard_lexicon_predictions": [
+            "TƏŞƏM",
+            "SƏHƏR",
+            "ŞƏHƏR",
+            "ŞƏHƏR",
+            "TƏŞƏM"
+          ],
+          "soft_lexicon_predictions_beta1": [
+            "QƏLƏM",
+            "QƏLƏM",
+            "QƏLƏM",
+            "QƏLƏM",
+            "QƏLƏM"
+          ]
+        },
+        "BAHAR": {
+          "samples_evaluated": 5,
+          "greedy_correct": 5,
+          "beam_bigram_correct": 5,
+          "hard_lexicon_correct": 0,
+          "soft_lexicon_correct": {
+            "beta_0.0": 5,
+            "beta_0.5": 5,
+            "beta_1.0": 5,
+            "beta_2.0": 5,
+            "beta_3.0": 5
+          },
+          "hard_lexicon_predictions": [
+            "BUYUR",
+            "BALAR",
+            "BUYUR",
+            "BUYUR",
+            "BUYUR"
+          ],
+          "soft_lexicon_predictions_beta1": [
+            "BAHAR",
+            "BAHAR",
+            "BAHAR",
+            "BAHAR",
+            "BAHAR"
+          ]
+        },
+        "SƏMA": {
+          "samples_evaluated": 5,
+          "greedy_correct": 5,
+          "beam_bigram_correct": 5,
+          "hard_lexicon_correct": 0,
+          "soft_lexicon_correct": {
+            "beta_0.0": 5,
+            "beta_0.5": 5,
+            "beta_1.0": 5,
+            "beta_2.0": 5,
+            "beta_3.0": 5
+          },
+          "hard_lexicon_predictions": [
+            "İSTA",
+            "STUA",
+            "SOYU",
+            "STUA",
+            "STUA"
+          ],
+          "soft_lexicon_predictions_beta1": [
+            "SƏMA",
+            "SƏMA",
+            "SƏMA",
+            "SƏMA",
+            "SƏMA"
+          ]
+        },
+        "BULUD": {
+          "samples_evaluated": 5,
+          "greedy_correct": 5,
+          "beam_bigram_correct": 5,
+          "hard_lexicon_correct": 0,
+          "soft_lexicon_correct": {
+            "beta_0.0": 5,
+            "beta_0.5": 5,
+            "beta_1.0": 5,
+            "beta_2.0": 5,
+            "beta_3.0": 5
+          },
+          "hard_lexicon_predictions": [
+            "BUYUR",
+            "BUYUR",
+            "BUYUR",
+            "BUYUR",
+            "BUYUR"
+          ],
+          "soft_lexicon_predictions_beta1": [
+            "BULUD",
+            "BULUD",
+            "BULUD",
+            "BULUD",
+            "BULUD"
+          ]
+        },
+        "GƏMİ": {
+          "samples_evaluated": 5,
+          "greedy_correct": 5,
+          "beam_bigram_correct": 5,
+          "hard_lexicon_correct": 0,
+          "soft_lexicon_correct": {
+            "beta_0.0": 5,
+            "beta_0.5": 5,
+            "beta_1.0": 5,
+            "beta_2.0": 5,
+            "beta_3.0": 5
+          },
+          "hard_lexicon_predictions": [
+            "GÖRİ",
+            "GƏLİ",
+            "GÖRİ",
+            "GÖRİ",
+            "GƏLİ"
+          ],
+          "soft_lexicon_predictions_beta1": [
+            "GƏMİ",
+            "GƏMİ",
+            "GƏMİ",
+            "GƏMİ",
+            "GƏMİ"
+          ]
+        },
+        "HƏYAT": {
+          "samples_evaluated": 5,
+          "greedy_correct": 5,
+          "beam_bigram_correct": 5,
+          "hard_lexicon_correct": 0,
+          "soft_lexicon_correct": {
+            "beta_0.0": 5,
+            "beta_0.5": 5,
+            "beta_1.0": 5,
+            "beta_2.0": 5,
+            "beta_3.0": 5
+          },
+          "hard_lexicon_predictions": [
+            "TƏŞAT",
+            "TƏŞAT",
+            "TƏŞAT",
+            "ŞƏHAT",
+            "QUŞAT"
+          ],
+          "soft_lexicon_predictions_beta1": [
+            "HƏYAT",
+            "HƏYAT",
+            "HƏYAT",
+            "HƏYAT",
+            "HƏYAT"
+          ]
+        },
+        "VƏTƏN": {
+          "samples_evaluated": 5,
+          "greedy_correct": 5,
+          "beam_bigram_correct": 5,
+          "hard_lexicon_correct": 0,
+          "soft_lexicon_correct": {
+            "beta_0.0": 5,
+            "beta_0.5": 5,
+            "beta_1.0": 5,
+            "beta_2.0": 5,
+            "beta_3.0": 5
+          },
+          "hard_lexicon_predictions": [
+            "İSTƏN",
+            "TƏŞƏN",
+            "TƏŞƏN",
+            "STUƏN",
+            "ŞƏHƏR"
+          ],
+          "soft_lexicon_predictions_beta1": [
+            "VƏTƏN",
+            "VƏTƏN",
+            "VƏTƏN",
+            "VƏTƏN",
+            "VƏTƏN"
+          ]
+        },
+        "BAYRAQ": {
+          "samples_evaluated": 5,
+          "greedy_correct": 5,
+          "beam_bigram_correct": 5,
+          "hard_lexicon_correct": 0,
+          "soft_lexicon_correct": {
+            "beta_0.0": 5,
+            "beta_0.5": 5,
+            "beta_1.0": 5,
+            "beta_2.0": 5,
+            "beta_3.0": 5
+          },
+          "hard_lexicon_predictions": [
+            "BUYURQ",
+            "BEŞRAQ",
+            "BUYURQ",
+            "BUYURQ",
+            "BUYURQ"
+          ],
+          "soft_lexicon_predictions_beta1": [
+            "BAYRAQ",
+            "BAYRAQ",
+            "BAYRAQ",
+            "BAYRAQ",
+            "BAYRAQ"
+          ]
+        },
+        "ÇANTA": {
+          "samples_evaluated": 5,
+          "greedy_correct": 5,
+          "beam_bigram_correct": 5,
+          "hard_lexicon_correct": 0,
+          "soft_lexicon_correct": {
+            "beta_0.0": 5,
+            "beta_0.5": 5,
+            "beta_1.0": 5,
+            "beta_2.0": 5,
+            "beta_3.0": 5
+          },
+          "hard_lexicon_predictions": [
+            "ÇAYTA",
+            "ÇAYTA",
+            "YAZMA",
+            "YAZMA",
+            "YAZMA"
+          ],
+          "soft_lexicon_predictions_beta1": [
+            "ÇANTA",
+            "ÇANTA",
+            "ÇANTA",
+            "ÇANTA",
+            "ÇANTA"
+          ]
+        },
+        "DƏFTƏR": {
+          "samples_evaluated": 5,
+          "greedy_correct": 5,
+          "beam_bigram_correct": 5,
+          "hard_lexicon_correct": 0,
+          "soft_lexicon_correct": {
+            "beta_0.0": 5,
+            "beta_0.5": 5,
+            "beta_1.0": 5,
+            "beta_2.0": 5,
+            "beta_3.0": 5
+          },
+          "hard_lexicon_predictions": [
+            "DÖRTƏR",
+            "DÖRTƏR",
+            "DÖRTƏR",
+            "DÖRTƏR",
+            "DÖRTƏR"
+          ],
+          "soft_lexicon_predictions_beta1": [
+            "DƏFTƏR",
+            "DƏFTƏR",
+            "DƏFTƏR",
+            "DƏFTƏR",
+            "DƏFTƏR"
+          ]
+        },
+        "PƏNCƏRƏ": {
+          "samples_evaluated": 5,
+          "greedy_correct": 5,
+          "beam_bigram_correct": 5,
+          "hard_lexicon_correct": 0,
+          "soft_lexicon_correct": {
+            "beta_0.0": 5,
+            "beta_0.5": 5,
+            "beta_1.0": 5,
+            "beta_2.0": 5,
+            "beta_3.0": 5
+          },
+          "hard_lexicon_predictions": [
+            "SƏNCƏRƏ",
+            "SƏNCƏRƏ",
+            "SƏNCƏRƏ",
+            "SƏNCƏRƏ",
+            "SƏNCƏRƏ"
+          ],
+          "soft_lexicon_predictions_beta1": [
+            "PƏNCƏRƏ",
+            "PƏNCƏRƏ",
+            "PƏNCƏRƏ",
+            "PƏNCƏRƏ",
+            "PƏNCƏRƏ"
+          ]
+        },
+        "MƏKTUB": {
+          "samples_evaluated": 5,
+          "greedy_correct": 5,
+          "beam_bigram_correct": 5,
+          "hard_lexicon_correct": 5,
+          "soft_lexicon_correct": {
+            "beta_0.0": 5,
+            "beta_0.5": 5,
+            "beta_1.0": 5,
+            "beta_2.0": 5,
+            "beta_3.0": 5
+          },
+          "hard_lexicon_predictions": [
+            "MƏKTUB",
+            "MƏKTUB",
+            "MƏKTUB",
+            "MƏKTUB",
+            "MƏKTUB"
+          ],
+          "soft_lexicon_predictions_beta1": [
+            "MƏKTUB",
+            "MƏKTUB",
+            "MƏKTUB",
+            "MƏKTUB",
+            "MƏKTUB"
+          ]
+        },
+        "BULAQ": {
+          "samples_evaluated": 5,
+          "greedy_correct": 5,
+          "beam_bigram_correct": 5,
+          "hard_lexicon_correct": 0,
+          "soft_lexicon_correct": {
+            "beta_0.0": 5,
+            "beta_0.5": 5,
+            "beta_1.0": 5,
+            "beta_2.0": 5,
+            "beta_3.0": 5
+          },
+          "hard_lexicon_predictions": [
+            "BUYUR",
+            "BÖYÜQ",
+            "BUYUR",
+            "BUYUR",
+            "BUYUR"
+          ],
+          "soft_lexicon_predictions_beta1": [
+            "BULAQ",
+            "BULAQ",
+            "BULAQ",
+            "BULAQ",
+            "BULAQ"
+          ]
+        },
+        "YAĞIŞ": {
+          "samples_evaluated": 5,
+          "greedy_correct": 5,
+          "beam_bigram_correct": 5,
+          "hard_lexicon_correct": 0,
+          "soft_lexicon_correct": {
+            "beta_0.0": 5,
+            "beta_0.5": 5,
+            "beta_1.0": 5,
+            "beta_2.0": 5,
+            "beta_3.0": 5
+          },
+          "hard_lexicon_predictions": [
+            "YAZIŞ",
+            "YAZIŞ",
+            "YAZIŞ",
+            "YAZIŞ",
+            "SAĞOŞ"
+          ],
+          "soft_lexicon_predictions_beta1": [
+            "YAĞIŞ",
+            "YAĞIŞ",
+            "YAĞIŞ",
+            "YAĞIŞ",
+            "YAĞIŞ"
+          ]
+        },
+        "QUMLUQ": {
+          "samples_evaluated": 5,
+          "greedy_correct": 5,
+          "beam_bigram_correct": 5,
+          "hard_lexicon_correct": 0,
+          "soft_lexicon_correct": {
+            "beta_0.0": 5,
+            "beta_0.5": 5,
+            "beta_1.0": 5,
+            "beta_2.0": 5,
+            "beta_3.0": 5
+          },
+          "hard_lexicon_predictions": [
+            "QUŞLUQ",
+            "STULUQ",
+            "QUŞLUQ",
+            "QUŞLUQ",
+            "STULUQ"
+          ],
+          "soft_lexicon_predictions_beta1": [
+            "QUMLUQ",
+            "QUMLUQ",
+            "QUMLUQ",
+            "QUMLUQ",
+            "QUMLUQ"
+          ]
+        }
+      }
+    },
+    "scenario_2_live_variation": {
+      "iv_metrics": {
+        "greedy": {
+          "word_acc": 78.67,
+          "char_acc": 94.48,
+          "wer": 21.33,
+          "cer": 5.52,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.0214
+        },
+        "beam_bigram": {
+          "word_acc": 86.67,
+          "char_acc": 96.55,
+          "wer": 13.33,
+          "cer": 3.45,
+          "rescued_count": 6,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.3961
+        },
+        "beam_hard_lexicon": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 16,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.356
+        },
+        "soft_beta_0.0": {
+          "word_acc": 86.67,
+          "char_acc": 96.55,
+          "wer": 13.33,
+          "cer": 3.45,
+          "rescued_count": 6,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.3863
+        },
+        "soft_beta_0.5": {
+          "word_acc": 88.0,
+          "char_acc": 96.9,
+          "wer": 12.0,
+          "cer": 3.1,
+          "rescued_count": 7,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.3604
+        },
+        "soft_beta_1.0": {
+          "word_acc": 88.0,
+          "char_acc": 96.9,
+          "wer": 12.0,
+          "cer": 3.1,
+          "rescued_count": 7,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.373
+        },
+        "soft_beta_2.0": {
+          "word_acc": 94.67,
+          "char_acc": 98.62,
+          "wer": 5.33,
+          "cer": 1.38,
+          "rescued_count": 12,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.3852
+        },
+        "soft_beta_3.0": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 16,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.3936
+        }
+      },
+      "oov_metrics": {
+        "greedy": {
+          "word_acc": 76.0,
+          "char_acc": 95.19,
+          "wer": 24.0,
+          "cer": 4.81,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.0233
+        },
+        "beam_bigram": {
+          "word_acc": 76.0,
+          "char_acc": 95.19,
+          "wer": 24.0,
+          "cer": 4.81,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.5453
+        },
+        "beam_hard_lexicon": {
+          "word_acc": 5.33,
+          "char_acc": 61.27,
+          "wer": 94.67,
+          "cer": 38.73,
+          "rescued_count": 0,
+          "hurt_count": 53,
+          "avg_latency_ms": 0.4539
+        },
+        "soft_beta_0.0": {
+          "word_acc": 76.0,
+          "char_acc": 95.19,
+          "wer": 24.0,
+          "cer": 4.81,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.4982
+        },
+        "soft_beta_0.5": {
+          "word_acc": 76.0,
+          "char_acc": 95.19,
+          "wer": 24.0,
+          "cer": 4.81,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.5074
+        },
+        "soft_beta_1.0": {
+          "word_acc": 76.0,
+          "char_acc": 95.19,
+          "wer": 24.0,
+          "cer": 4.81,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.5253
+        },
+        "soft_beta_2.0": {
+          "word_acc": 76.0,
+          "char_acc": 95.19,
+          "wer": 24.0,
+          "cer": 4.81,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.517
+        },
+        "soft_beta_3.0": {
+          "word_acc": 76.0,
+          "char_acc": 95.19,
+          "wer": 24.0,
+          "cer": 4.81,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.5276
+        }
+      },
+      "overall_metrics": {
+        "greedy": {
+          "word_acc": 77.33,
+          "char_acc": 94.89,
+          "wer": 22.67,
+          "cer": 5.11,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.0224
+        },
+        "beam_bigram": {
+          "word_acc": 81.33,
+          "char_acc": 95.77,
+          "wer": 18.67,
+          "cer": 4.23,
+          "rescued_count": 6,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.4707
+        },
+        "beam_hard_lexicon": {
+          "word_acc": 52.67,
+          "char_acc": 77.66,
+          "wer": 47.33,
+          "cer": 22.34,
+          "rescued_count": 16,
+          "hurt_count": 53,
+          "avg_latency_ms": 0.4049
+        },
+        "soft_beta_0.0": {
+          "word_acc": 81.33,
+          "char_acc": 95.77,
+          "wer": 18.67,
+          "cer": 4.23,
+          "rescued_count": 6,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.4422
+        },
+        "soft_beta_0.5": {
+          "word_acc": 82.0,
+          "char_acc": 95.91,
+          "wer": 18.0,
+          "cer": 4.09,
+          "rescued_count": 7,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.4339
+        },
+        "soft_beta_1.0": {
+          "word_acc": 82.0,
+          "char_acc": 95.91,
+          "wer": 18.0,
+          "cer": 4.09,
+          "rescued_count": 7,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.4492
+        },
+        "soft_beta_2.0": {
+          "word_acc": 85.33,
+          "char_acc": 96.64,
+          "wer": 14.67,
+          "cer": 3.36,
+          "rescued_count": 12,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.4511
+        },
+        "soft_beta_3.0": {
+          "word_acc": 88.0,
+          "char_acc": 97.23,
+          "wer": 12.0,
+          "cer": 2.77,
+          "rescued_count": 16,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.4606
+        }
+      },
+      "oov_details": {
+        "QƏLƏM": {
+          "samples_evaluated": 5,
+          "greedy_correct": 3,
+          "beam_bigram_correct": 3,
+          "hard_lexicon_correct": 0,
+          "soft_lexicon_correct": {
+            "beta_0.0": 3,
+            "beta_0.5": 3,
+            "beta_1.0": 3,
+            "beta_2.0": 3,
+            "beta_3.0": 3
+          },
+          "hard_lexicon_predictions": [
+            "TƏŞƏM",
+            "SƏHƏR",
+            "TƏŞƏM",
+            "ŞƏHƏR",
+            "TƏŞƏL"
+          ],
+          "soft_lexicon_predictions_beta1": [
+            "QƏLƏM",
+            "QƏLƏM",
+            "QƏLƏM",
+            "QƏHƏM",
+            "QƏLƏL"
+          ]
+        },
+        "BAHAR": {
+          "samples_evaluated": 5,
+          "greedy_correct": 4,
+          "beam_bigram_correct": 4,
+          "hard_lexicon_correct": 1,
+          "soft_lexicon_correct": {
+            "beta_0.0": 4,
+            "beta_0.5": 4,
+            "beta_1.0": 4,
+            "beta_2.0": 4,
+            "beta_3.0": 4
+          },
+          "hard_lexicon_predictions": [
+            "BUYUR",
+            "BÖYÜR",
+            "SAĞOR",
+            "BUYUR",
+            "BAHAR"
+          ],
+          "soft_lexicon_predictions_beta1": [
+            "BAHAR",
+            "BAHAR",
+            "ZAHAR",
+            "BAHAR",
+            "BAHAR"
+          ]
+        },
+        "SƏMA": {
+          "samples_evaluated": 5,
+          "greedy_correct": 5,
+          "beam_bigram_correct": 5,
+          "hard_lexicon_correct": 0,
+          "soft_lexicon_correct": {
+            "beta_0.0": 5,
+            "beta_0.5": 5,
+            "beta_1.0": 5,
+            "beta_2.0": 5,
+            "beta_3.0": 5
+          },
+          "hard_lexicon_predictions": [
+            "SOYU",
+            "STUA",
+            "SOYU",
+            "STUA",
+            "STUA"
+          ],
+          "soft_lexicon_predictions_beta1": [
+            "SƏMA",
+            "SƏMA",
+            "SƏMA",
+            "SƏMA",
+            "SƏMA"
+          ]
+        },
+        "BULUD": {
+          "samples_evaluated": 5,
+          "greedy_correct": 3,
+          "beam_bigram_correct": 3,
+          "hard_lexicon_correct": 0,
+          "soft_lexicon_correct": {
+            "beta_0.0": 3,
+            "beta_0.5": 3,
+            "beta_1.0": 3,
+            "beta_2.0": 3,
+            "beta_3.0": 3
+          },
+          "hard_lexicon_predictions": [
+            "BUYUR",
+            "BUYUR",
+            "BUYUR",
+            "BUYUR",
+            "BUYUR"
+          ],
+          "soft_lexicon_predictions_beta1": [
+            "BULUD",
+            "BULUD",
+            "ZULUD",
+            "BUHUD",
+            "BULUD"
+          ]
+        },
+        "GƏMİ": {
+          "samples_evaluated": 5,
+          "greedy_correct": 4,
+          "beam_bigram_correct": 4,
+          "hard_lexicon_correct": 0,
+          "soft_lexicon_correct": {
+            "beta_0.0": 4,
+            "beta_0.5": 4,
+            "beta_1.0": 4,
+            "beta_2.0": 4,
+            "beta_3.0": 4
+          },
+          "hard_lexicon_predictions": [
+            "GÖRİ",
+            "GƏLİ",
+            "GÖRİ",
+            "GÖRY",
+            "GƏLİ"
+          ],
+          "soft_lexicon_predictions_beta1": [
+            "GƏMİ",
+            "GƏMİ",
+            "GƏMİ",
+            "GƏMY",
+            "GƏMİ"
+          ]
+        },
+        "HƏYAT": {
+          "samples_evaluated": 5,
+          "greedy_correct": 4,
+          "beam_bigram_correct": 4,
+          "hard_lexicon_correct": 0,
+          "soft_lexicon_correct": {
+            "beta_0.0": 4,
+            "beta_0.5": 4,
+            "beta_1.0": 4,
+            "beta_2.0": 4,
+            "beta_3.0": 4
+          },
+          "hard_lexicon_predictions": [
+            "TƏŞAL",
+            "QUŞAT",
+            "ŞUŞAT",
+            "QUŞAT",
+            "GÖRAT"
+          ],
+          "soft_lexicon_predictions_beta1": [
+            "HƏYAL",
+            "HƏYAT",
+            "HƏYAT",
+            "HƏYAT",
+            "HƏYAT"
+          ]
+        },
+        "VƏTƏN": {
+          "samples_evaluated": 5,
+          "greedy_correct": 4,
+          "beam_bigram_correct": 4,
+          "hard_lexicon_correct": 0,
+          "soft_lexicon_correct": {
+            "beta_0.0": 4,
+            "beta_0.5": 4,
+            "beta_1.0": 4,
+            "beta_2.0": 4,
+            "beta_3.0": 4
+          },
+          "hard_lexicon_predictions": [
+            "İSTƏN",
+            "TƏŞƏN",
+            "GƏLƏN",
+            "TƏŞƏN",
+            "SƏHƏR"
+          ],
+          "soft_lexicon_predictions_beta1": [
+            "VƏTƏN",
+            "VƏTƏN",
+            "VƏTƏN",
+            "VƏTƏN",
+            "VƏYƏN"
+          ]
+        },
+        "BAYRAQ": {
+          "samples_evaluated": 5,
+          "greedy_correct": 4,
+          "beam_bigram_correct": 4,
+          "hard_lexicon_correct": 1,
+          "soft_lexicon_correct": {
+            "beta_0.0": 4,
+            "beta_0.5": 4,
+            "beta_1.0": 4,
+            "beta_2.0": 4,
+            "beta_3.0": 4
+          },
+          "hard_lexicon_predictions": [
+            "BUYURQ",
+            "BÖYRAQ",
+            "YAZRAQ",
+            "BUYURQ",
+            "BAYRAQ"
+          ],
+          "soft_lexicon_predictions_beta1": [
+            "BAYRAQ",
+            "BAYRAQ",
+            "ZAYRAQ",
+            "BAYRAQ",
+            "BAYRAQ"
+          ]
+        },
+        "ÇANTA": {
+          "samples_evaluated": 5,
+          "greedy_correct": 5,
+          "beam_bigram_correct": 5,
+          "hard_lexicon_correct": 0,
+          "soft_lexicon_correct": {
+            "beta_0.0": 5,
+            "beta_0.5": 5,
+            "beta_1.0": 5,
+            "beta_2.0": 5,
+            "beta_3.0": 5
+          },
+          "hard_lexicon_predictions": [
+            "ÇAYTA",
+            "YENTA",
+            "YAZMA",
+            "YAZMA",
+            "YAZMA"
+          ],
+          "soft_lexicon_predictions_beta1": [
+            "ÇANTA",
+            "ÇANTA",
+            "ÇANTA",
+            "ÇANTA",
+            "ÇANTA"
+          ]
+        },
+        "DƏFTƏR": {
+          "samples_evaluated": 5,
+          "greedy_correct": 4,
+          "beam_bigram_correct": 4,
+          "hard_lexicon_correct": 0,
+          "soft_lexicon_correct": {
+            "beta_0.0": 4,
+            "beta_0.5": 4,
+            "beta_1.0": 4,
+            "beta_2.0": 4,
+            "beta_3.0": 4
+          },
+          "hard_lexicon_predictions": [
+            "DÖRTYR",
+            "DÖRTƏR",
+            "DÖRTƏR",
+            "DÖRTƏR",
+            "DÖRTƏR"
+          ],
+          "soft_lexicon_predictions_beta1": [
+            "DƏFTYR",
+            "DƏFTƏR",
+            "DƏFTƏR",
+            "DƏFTƏR",
+            "DƏFTƏR"
+          ]
+        },
+        "PƏNCƏRƏ": {
+          "samples_evaluated": 5,
+          "greedy_correct": 3,
+          "beam_bigram_correct": 3,
+          "hard_lexicon_correct": 0,
+          "soft_lexicon_correct": {
+            "beta_0.0": 3,
+            "beta_0.5": 3,
+            "beta_1.0": 3,
+            "beta_2.0": 3,
+            "beta_3.0": 3
+          },
+          "hard_lexicon_predictions": [
+            "SƏNCYRY",
+            "SƏNCƏRƏ",
+            "SƏNCƏRƏ",
+            "SƏNCƏRƏ",
+            "SƏNCƏRƏ"
+          ],
+          "soft_lexicon_predictions_beta1": [
+            "PƏNCYRY",
+            "PƏNCƏRƏ",
+            "YƏNCƏRƏ",
+            "PƏNCƏRƏ",
+            "PƏNCƏRƏ"
+          ]
+        },
+        "MƏKTUB": {
+          "samples_evaluated": 5,
+          "greedy_correct": 2,
+          "beam_bigram_correct": 2,
+          "hard_lexicon_correct": 2,
+          "soft_lexicon_correct": {
+            "beta_0.0": 2,
+            "beta_0.5": 2,
+            "beta_1.0": 2,
+            "beta_2.0": 2,
+            "beta_3.0": 2
+          },
+          "hard_lexicon_predictions": [
+            "MƏKTƏB",
+            "MƏKTUB",
+            "MƏKTUY",
+            "MƏKTUB",
+            "MƏKTƏB"
+          ],
+          "soft_lexicon_predictions_beta1": [
+            "MƏKTÜB",
+            "MƏKTUB",
+            "MƏKTUY",
+            "MƏKTUB",
+            "LƏKTUB"
+          ]
+        },
+        "BULAQ": {
+          "samples_evaluated": 5,
+          "greedy_correct": 3,
+          "beam_bigram_correct": 3,
+          "hard_lexicon_correct": 0,
+          "soft_lexicon_correct": {
+            "beta_0.0": 3,
+            "beta_0.5": 3,
+            "beta_1.0": 3,
+            "beta_2.0": 3,
+            "beta_3.0": 3
+          },
+          "hard_lexicon_predictions": [
+            "BUYUR",
+            "BÖYÜQ",
+            "BUYUR",
+            "BUYUR",
+            "BİLAQ"
+          ],
+          "soft_lexicon_predictions_beta1": [
+            "BULAQ",
+            "BULAQ",
+            "ZULAQ",
+            "BUHAQ",
+            "BULAQ"
+          ]
+        },
+        "YAĞIŞ": {
+          "samples_evaluated": 5,
+          "greedy_correct": 5,
+          "beam_bigram_correct": 5,
+          "hard_lexicon_correct": 0,
+          "soft_lexicon_correct": {
+            "beta_0.0": 5,
+            "beta_0.5": 5,
+            "beta_1.0": 5,
+            "beta_2.0": 5,
+            "beta_3.0": 5
+          },
+          "hard_lexicon_predictions": [
+            "YAZIŞ",
+            "SAĞIŞ",
+            "YAZIŞ",
+            "YAZIŞ",
+            "SAĞOŞ"
+          ],
+          "soft_lexicon_predictions_beta1": [
+            "YAĞIŞ",
+            "YAĞIŞ",
+            "YAĞIŞ",
+            "YAĞIŞ",
+            "YAĞIŞ"
+          ]
+        },
+        "QUMLUQ": {
+          "samples_evaluated": 5,
+          "greedy_correct": 4,
+          "beam_bigram_correct": 4,
+          "hard_lexicon_correct": 0,
+          "soft_lexicon_correct": {
+            "beta_0.0": 4,
+            "beta_0.5": 4,
+            "beta_1.0": 4,
+            "beta_2.0": 4,
+            "beta_3.0": 4
+          },
+          "hard_lexicon_predictions": [
+            "STULÜQ",
+            "STULUQ",
+            "QUŞLUQ",
+            "QUŞLUQ",
+            "QUŞLUQ"
+          ],
+          "soft_lexicon_predictions_beta1": [
+            "QUMLÜQ",
+            "QUMLUQ",
+            "QUMLUQ",
+            "QUMLUQ",
+            "QUMLUQ"
+          ]
+        }
+      }
+    }
+  }
+}
