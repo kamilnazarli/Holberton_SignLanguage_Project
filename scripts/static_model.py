@@ -214,3 +214,108 @@ class StaticHierarchicalModel:
             "candidates": letter_cands[:3],
         }
 
+
+# ============================================================================
+# Landmark-Level Data Augmentation (Training-Only)
+# ============================================================================
+def rotate_landmarks(
+    landmarks: np.ndarray,
+    max_angles: Tuple[float, float, float] = (8.0, 8.0, 10.0),
+    rng: Optional[np.random.RandomState] = None,
+) -> np.ndarray:
+    """
+    Applies small 3D rotation around wrist origin (0, 0, 0).
+    max_angles: (max_x_deg, max_y_deg, max_z_deg) representing pitch, yaw, roll.
+    """
+    if rng is None:
+        rng = np.random.RandomState()
+
+    ax = np.radians(rng.uniform(-max_angles[0], max_angles[0]))
+    ay = np.radians(rng.uniform(-max_angles[1], max_angles[1]))
+    az = np.radians(rng.uniform(-max_angles[2], max_angles[2]))
+
+    cx, sx = np.cos(ax), np.sin(ax)
+    Rx = np.array([[1.0, 0.0, 0.0], [0.0, cx, -sx], [0.0, sx, cx]], dtype=np.float64)
+
+    cy, sy = np.cos(ay), np.sin(ay)
+    Ry = np.array([[cy, 0.0, sy], [0.0, 1.0, 0.0], [-sy, 0.0, cy]], dtype=np.float64)
+
+    cz, sz = np.cos(az), np.sin(az)
+    Rz = np.array([[cz, -sz, 0.0], [sz, cz, 0.0], [0.0, 0.0, 1.0]], dtype=np.float64)
+
+    R = Rz @ Ry @ Rx
+    return (landmarks @ R.T).astype(np.float64)
+
+
+def scale_landmarks(
+    landmarks: np.ndarray,
+    scale_range: Tuple[float, float] = (0.92, 1.08),
+    rng: Optional[np.random.RandomState] = None,
+) -> np.ndarray:
+    """
+    Slightly scales the entire hand around wrist/origin (0, 0, 0).
+    """
+    if rng is None:
+        rng = np.random.RandomState()
+    scale = rng.uniform(scale_range[0], scale_range[1])
+    return (landmarks * scale).astype(np.float64)
+
+
+def translate_landmarks(
+    landmarks: np.ndarray,
+    max_translation: float = 0.02,
+    rng: Optional[np.random.RandomState] = None,
+) -> np.ndarray:
+    """
+    Small displacement of the entire hand, simulating MediaPipe wrist localization noise.
+    """
+    if rng is None:
+        rng = np.random.RandomState()
+    if max_translation <= 0:
+        return landmarks.copy()
+    offset = rng.uniform(-max_translation, max_translation, size=(1, 3))
+    return (landmarks + offset).astype(np.float64)
+
+
+def jitter_landmarks(
+    landmarks: np.ndarray,
+    jitter_std: float = 0.008,
+    rng: Optional[np.random.RandomState] = None,
+) -> np.ndarray:
+    """
+    Adds small Gaussian noise to landmark coordinates to simulate tracking jitter.
+    """
+    if rng is None:
+        rng = np.random.RandomState()
+    if jitter_std <= 0:
+        return landmarks.copy()
+    noise = rng.normal(0.0, jitter_std, size=landmarks.shape)
+    return (landmarks + noise).astype(np.float64)
+
+
+def augment_landmarks(
+    landmarks: np.ndarray,
+    max_angles: Tuple[float, float, float] = (8.0, 8.0, 10.0),
+    scale_range: Tuple[float, float] = (0.92, 1.08),
+    max_translation: float = 0.02,
+    jitter_std: float = 0.008,
+    rng: Optional[np.random.RandomState] = None,
+) -> np.ndarray:
+    """
+    Master augmentation pipeline applying rotation, scaling, jitter, and translation.
+    Must be applied ONLY to training data, before build_feature_vector_84().
+    """
+    if rng is None:
+        rng = np.random.RandomState()
+    aug = landmarks.copy()
+    if max_angles and any(a > 0 for a in max_angles):
+        aug = rotate_landmarks(aug, max_angles=max_angles, rng=rng)
+    if scale_range and (scale_range[0] != 1.0 or scale_range[1] != 1.0):
+        aug = scale_landmarks(aug, scale_range=scale_range, rng=rng)
+    if jitter_std > 0:
+        aug = jitter_landmarks(aug, jitter_std=jitter_std, rng=rng)
+    if max_translation > 0:
+        aug = translate_landmarks(aug, max_translation=max_translation, rng=rng)
+    return aug
+
+

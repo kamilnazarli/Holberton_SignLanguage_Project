@@ -46,6 +46,7 @@ Requires: mediapipe, opencv-python, numpy, scikit-learn (see requirements.txt)
 import argparse
 import json
 import os
+import pickle
 import re
 import sys
 import time
@@ -54,9 +55,33 @@ from datetime import datetime, timezone
 import cv2
 import numpy as np
 
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from scripts.static_model import augment_landmarks
+
 for _stream in (sys.stdout, sys.stderr):
     if hasattr(_stream, "reconfigure"):
         _stream.reconfigure(encoding="utf-8", errors="replace")
+
+import types
+
+# Ensure doc_controls is mocked if tensorflow docs are missing / on Python 3.13
+if "tensorflow" not in sys.modules:
+    tf = types.ModuleType("tensorflow")
+    tf_tools = types.ModuleType("tensorflow.tools")
+    tf_docs = types.ModuleType("tensorflow.tools.docs")
+
+    class _DocControls:
+        @staticmethod
+        def do_not_doc_inheritable(obj): return obj
+        @staticmethod
+        def do_not_generate_docs(obj): return obj
+
+    tf_docs.doc_controls = _DocControls
+    tf.tools = tf_tools
+    tf_tools.docs = tf_docs
+    sys.modules["tensorflow"] = tf
+    sys.modules["tensorflow.tools"] = tf_tools
+    sys.modules["tensorflow.tools.docs"] = tf_docs
 
 try:
     import mediapipe as mp
@@ -71,6 +96,7 @@ try:
     from sklearn.preprocessing import StandardScaler
 except ImportError as exc:
     sys.exit(f"scikit-learn is required: {exc}\npip install -r scripts/requirements.txt")
+
 
 # ============================================================================
 # Alphabet, clusters, landmark layout
@@ -272,7 +298,12 @@ def extract_letter(landmarker, letter, folder):
         v = velocity.copy()
         if mirror_x:
             v[0] *= -1
-        records.append(build_feature_vector(coords, v))
+        feat84 = build_feature_vector(coords, v)
+        records.append({
+            "coords": coords,
+            "velocity": v,
+            "feat84": feat84,
+        })
 
     for fname in standalone:
         detection = detect_hand(landmarker, os.path.join(folder, fname))
@@ -280,17 +311,37 @@ def extract_letter(landmarker, letter, folder):
             continue
         raw_xyz, mirror_x = detection
         coords = normalize_landmarks(raw_xyz, mirror_x)
-        records.append(build_feature_vector(coords, np.zeros(2, dtype=np.float64)))
+        v = np.zeros(2, dtype=np.float64)
+        feat84 = build_feature_vector(coords, v)
+        records.append({
+            "coords": coords,
+            "velocity": v,
+            "feat84": feat84,
+        })
 
     return records, len(sequential) + len(standalone)
 
 
-def extract_all(data_dir, model_path, min_confidence, max_per_class, seed):
+def extract_all(data_dir, model_path, min_confidence, max_per_class, seed, no_cache=False):
+    cache_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "models")
+    os.makedirs(cache_dir, exist_ok=True)
+    cache_file = os.path.join(cache_dir, ".static_landmarks_cache.pkl")
+
+    if not no_cache and os.path.isfile(cache_file):
+        try:
+            with open(cache_file, "rb") as f:
+                cached_data = pickle.load(f)
+            if cached_data.get("max_per_class") == max_per_class and cached_data.get("data_dir") == data_dir:
+                print(f"Loaded {len(cached_data['records'])} cached landmark records from {cache_file}")
+                return cached_data["records"], cached_data["y_letter"], cached_data["summary"]
+        except Exception as e:
+            print(f"Cache load error ({e}), re-extracting from images...")
+
     landmarker = build_landmarker(model_path, min_confidence)
     available = {d: os.path.join(data_dir, d) for d in os.listdir(data_dir) if os.path.isdir(os.path.join(data_dir, d))}
     rng = np.random.RandomState(seed)
 
-    X, y_letter = [], []
+    records, y_letter = [], []
     summary = []
     for letter in AZ_ALPHABET:
         folder = available.get(letter)
@@ -299,17 +350,71 @@ def extract_all(data_dir, model_path, min_confidence, max_per_class, seed):
             summary.append((letter, 0, 0))
             continue
         t0 = time.time()
-        records, attempted = extract_letter(landmarker, letter, folder)
-        if max_per_class and len(records) > max_per_class:
-            idx = rng.choice(len(records), size=max_per_class, replace=False)
-            records = [records[i] for i in idx]
-        for r in records:
-            X.append(r)
+        rec, attempted = extract_letter(landmarker, letter, folder)
+        if max_per_class and len(rec) > max_per_class:
+            idx = rng.choice(len(rec), size=max_per_class, replace=False)
+            rec = [rec[i] for i in idx]
+        for r in rec:
+            records.append(r)
             y_letter.append(letter)
-        summary.append((letter, attempted, len(records)))
-        print(f"  [OK] {letter}: {len(records)}/{attempted} usable ({time.time() - t0:.1f}s)")
+        summary.append((letter, attempted, len(rec)))
+        print(f"  [OK] {letter}: {len(rec)}/{attempted} usable ({time.time() - t0:.1f}s)")
 
-    return np.array(X, dtype=np.float64), np.array(y_letter), summary
+    try:
+        with open(cache_file, "wb") as f:
+            pickle.dump({
+                "records": records,
+                "y_letter": np.array(y_letter),
+                "summary": summary,
+                "max_per_class": max_per_class,
+                "data_dir": data_dir,
+            }, f)
+        print(f"Saved {len(records)} extracted landmark records to {cache_file}")
+    except Exception as e:
+        print(f"Warning: could not save cache ({e})")
+
+    return records, np.array(y_letter), summary
+
+
+def build_dataset(records, y_letter, augment=False, aug_copies=1, aug_params=None, rng=None):
+    """
+    Builds the 84-D feature matrix X, y_letter, and y_cluster.
+    If augment=False, returns exact unaugmented features.
+    If augment=True, keeps originals and appends aug_copies augmented versions
+    created by calling augment_landmarks(coords) BEFORE build_feature_vector().
+    """
+    if rng is None:
+        rng = np.random.RandomState()
+    if aug_params is None:
+        aug_params = {}
+
+    X_list = []
+    y_list = []
+
+    for r, label in zip(records, y_letter):
+        # 1. Always keep original unaugmented sample
+        X_list.append(r["feat84"])
+        y_list.append(label)
+
+        # 2. Add augmented copies if requested
+        if augment and aug_copies > 0:
+            for _ in range(aug_copies):
+                aug_coords = augment_landmarks(
+                    r["coords"],
+                    max_angles=aug_params.get("max_angles", (8.0, 8.0, 10.0)),
+                    scale_range=aug_params.get("scale_range", (0.92, 1.08)),
+                    max_translation=aug_params.get("max_trans", 0.02),
+                    jitter_std=aug_params.get("jitter_std", 0.008),
+                    rng=rng,
+                )
+                aug_feat = build_feature_vector(aug_coords, r["velocity"])
+                X_list.append(aug_feat)
+                y_list.append(label)
+
+    X = np.array(X_list, dtype=np.float64)
+    y = np.array(y_list)
+    y_cluster = np.array([LETTER_TO_CLUSTER[l] for l in y])
+    return X, y, y_cluster
 
 
 # ============================================================================
@@ -328,7 +433,7 @@ def export_mlp(clf):
               for w, b in zip(clf.coefs_, clf.intercepts_)]
     output_activation = "sigmoid_binary" if n_classes == 2 and len(layers[-1]["biases"]) == 1 else "softmax"
     return {
-        "classes": clf.classes_.tolist(),  # .tolist() (not list()) unwraps numpy.int64 into plain JSON-serializable ints
+        "classes": clf.classes_.tolist(),
         "layers": layers,
         "hiddenActivation": "relu",
         "outputActivation": output_activation,
@@ -339,68 +444,85 @@ def export_mlp(clf):
 # Training + cross-validation
 # ============================================================================
 def make_mlp(hidden, alpha, seed):
-    # early_stopping=True crashes here: sklearn's internal held-out validation
-    # score calls np.isnan() on predicted labels, which breaks for our string
-    # class labels (Azerbaijani letters) — works fine for Level-1's numeric
-    # cluster ids, which is why only Level-2 fitting crashed. Training-loss
-    # based convergence (tol/n_iter_no_change, still active without
-    # early_stopping) is sufficient at this dataset size regardless.
     return MLPClassifier(hidden_layer_sizes=hidden, alpha=alpha, max_iter=3000,
                           early_stopping=False, n_iter_no_change=25, random_state=seed)
 
 
-def cross_validate(X, y, hidden, alpha, seed, folds=5):
+def cross_validate(records, y, hidden, alpha, seed, folds=5, augment=False, aug_copies=1, aug_params=None):
     counts = {c: int(np.sum(y == c)) for c in np.unique(y)}
     min_count = min(counts.values())
     k = min(folds, min_count)
     if k < 2:
-        return None  # not enough samples in the smallest class to fold at all
+        return None
     skf = StratifiedKFold(n_splits=k, shuffle=True, random_state=seed)
     accs = []
-    for train_idx, test_idx in skf.split(X, y):
-        scaler = StandardScaler().fit(X[train_idx])
+    records_arr = np.array(records, dtype=object)
+    for fold_idx, (train_idx, test_idx) in enumerate(skf.split(records_arr, y)):
+        rng_fold = np.random.RandomState(seed + fold_idx)
+        train_records = records_arr[train_idx]
+        train_y = y[train_idx]
+        X_train, y_train, _ = build_dataset(
+            train_records, train_y, augment=augment, aug_copies=aug_copies, aug_params=aug_params, rng=rng_fold
+        )
+
+        test_records = records_arr[test_idx]
+        X_test = np.array([r["feat84"] for r in test_records], dtype=np.float64)
+        y_test = y[test_idx]
+
+        scaler = StandardScaler().fit(X_train)
         clf = make_mlp(hidden, alpha, seed)
-        clf.fit(scaler.transform(X[train_idx]), y[train_idx])
-        accs.append(float(clf.score(scaler.transform(X[test_idx]), y[test_idx])))
+        clf.fit(scaler.transform(X_train), y_train)
+        accs.append(float(clf.score(scaler.transform(X_test), y_test)))
     return {"folds": k, "perFold": [round(a, 4) for a in accs], "mean": round(float(np.mean(accs)), 4)}
 
 
-def end_to_end_cross_validate(X, y_letter, y_cluster, seed, folds=5):
-    """The metric that matters: dispatch through Level-1, then classify with
-    the matching Level-2 model, fresh-trained per fold — compare the FINAL
-    predicted letter against ground truth (not just per-level accuracy)."""
+def end_to_end_cross_validate(records, y_letter, y_cluster, seed, folds=5, augment=False, aug_copies=1, aug_params=None):
+    """Dispatch through Level-1, then classify with the matching Level-2 model.
+    Training folds receive augmentation if enabled; test folds are NEVER augmented."""
     skf = StratifiedKFold(n_splits=folds, shuffle=True, random_state=seed)
     accs = []
-    for train_idx, test_idx in skf.split(X, y_letter):
-        scaler80 = StandardScaler().fit(X[train_idx])
+    records_arr = np.array(records, dtype=object)
+    for fold_idx, (train_idx, test_idx) in enumerate(skf.split(records_arr, y_letter)):
+        rng_fold = np.random.RandomState(seed + fold_idx * 17)
+        train_records = records_arr[train_idx]
+        train_y_letter = y_letter[train_idx]
+        X_train, y_train_letter, y_train_cluster = build_dataset(
+            train_records, train_y_letter, augment=augment, aug_copies=aug_copies, aug_params=aug_params, rng=rng_fold
+        )
+
+        test_records = records_arr[test_idx]
+        X_test = np.array([r["feat84"] for r in test_records], dtype=np.float64)
+        y_test_letter = y_letter[test_idx]
+
+        scaler80 = StandardScaler().fit(X_train)
         level1 = make_mlp((48, 24), 1e-3, seed)
-        level1.fit(scaler80.transform(X[train_idx]), y_cluster[train_idx])
+        level1.fit(scaler80.transform(X_train), y_train_cluster)
 
         level2_models = {}
         for cid, letters in CLUSTERS.items():
-            mask = np.isin(y_letter[train_idx], letters)
+            mask = np.isin(y_train_letter, letters)
             if cid == 6:
-                sub_scaler = StandardScaler().fit(X[train_idx][mask])
+                sub_scaler = StandardScaler().fit(X_train[mask])
                 clf = make_mlp((64, 32), 1e-3, seed)
-                clf.fit(sub_scaler.transform(X[train_idx][mask]), y_letter[train_idx][mask])
+                clf.fit(sub_scaler.transform(X_train[mask]), y_train_letter[mask])
             else:
-                sub_X = X[train_idx][:, LEVEL2_NARROW_INDICES][mask]
+                sub_X = X_train[mask][:, LEVEL2_NARROW_INDICES]
                 sub_scaler = StandardScaler().fit(sub_X)
                 clf = make_mlp((16,), 1e-2, seed)
-                clf.fit(sub_scaler.transform(sub_X), y_letter[train_idx][mask])
+                clf.fit(sub_scaler.transform(sub_X), y_train_letter[mask])
             level2_models[cid] = (clf, sub_scaler)
 
-        pred_clusters = level1.predict(scaler80.transform(X[test_idx]))
+        pred_clusters = level1.predict(scaler80.transform(X_test))
         final_preds = []
         for i, cid in enumerate(pred_clusters):
             clf, sub_scaler = level2_models[cid]
             if cid == 6:
-                feat = scaler80.transform(X[test_idx][i:i + 1])
+                feat = scaler80.transform(X_test[i:i + 1])
             else:
-                feat = sub_scaler.transform(X[test_idx][i:i + 1][:, LEVEL2_NARROW_INDICES])
+                feat = sub_scaler.transform(X_test[i:i + 1][:, LEVEL2_NARROW_INDICES])
             final_preds.append(clf.predict(feat)[0])
 
-        accs.append(float(np.mean(np.array(final_preds) == y_letter[test_idx])))
+        accs.append(float(np.mean(np.array(final_preds) == y_test_letter)))
     return {"folds": folds, "perFold": [round(a, 4) for a in accs], "mean": round(float(np.mean(accs)), 4)}
 
 
@@ -412,6 +534,17 @@ def main():
     parser.add_argument("--max-per-class", type=int, default=250)
     parser.add_argument("--min-confidence", type=float, default=0.5)
     parser.add_argument("--seed", type=int, default=42)
+    # Augmentation options
+    parser.add_argument("--augment", action="store_true", help="Enable training-time landmark augmentation")
+    parser.add_argument("--aug-copies", type=int, default=1, help="Number of augmented copies per training sample (default: 1)")
+    parser.add_argument("--max-rot-x", type=float, default=8.0, help="Max rotation around X in degrees (default: 8.0)")
+    parser.add_argument("--max-rot-y", type=float, default=8.0, help="Max rotation around Y in degrees (default: 8.0)")
+    parser.add_argument("--max-rot-z", type=float, default=10.0, help="Max rotation around Z in degrees (default: 10.0)")
+    parser.add_argument("--scale-min", type=float, default=0.92, help="Min scale factor (default: 0.92)")
+    parser.add_argument("--scale-max", type=float, default=1.08, help="Max scale factor (default: 1.08)")
+    parser.add_argument("--max-trans", type=float, default=0.02, help="Max translation displacement (default: 0.02)")
+    parser.add_argument("--jitter-std", type=float, default=0.008, help="Landmark Gaussian jitter std (default: 0.008)")
+    parser.add_argument("--no-cache", action="store_true", help="Ignore landmark cache and re-extract from images")
     args = parser.parse_args()
 
     if not os.path.isdir(args.data_dir):
@@ -419,41 +552,87 @@ def main():
     if not os.path.isfile(args.model_path):
         sys.exit(f"Model file not found: {args.model_path}")
 
+    aug_params = {
+        "max_angles": (args.max_rot_x, args.max_rot_y, args.max_rot_z),
+        "scale_range": (args.scale_min, args.scale_max),
+        "max_trans": args.max_trans,
+        "jitter_std": args.jitter_std,
+    }
+
     print(f"Dataset:       {args.data_dir}")
     print(f"Max/class:     {args.max_per_class}")
-    print(f"Dynamic set:   {', '.join(DYNAMIC_LETTERS)} (empirically derived, see docstring)\n")
+    print(f"Dynamic set:   {', '.join(DYNAMIC_LETTERS)} (empirically derived, see docstring)")
+    if args.augment:
+        print(f"Augmentation:  ENABLED (copies={args.aug_copies}, rot={aug_params['max_angles']}, scale={aug_params['scale_range']}, trans={aug_params['max_trans']}, jitter={aug_params['jitter_std']})\n")
+    else:
+        print("Augmentation:  DISABLED (Baseline)\n")
 
     print("=== Step 1: Feature extraction ===")
-    X, y_letter, summary = extract_all(args.data_dir, args.model_path, args.min_confidence, args.max_per_class, args.seed)
+    records, y_letter, summary = extract_all(
+        args.data_dir, args.model_path, args.min_confidence, args.max_per_class, args.seed, no_cache=args.no_cache
+    )
     y_cluster = np.array([LETTER_TO_CLUSTER[l] for l in y_letter])
     print(f"\nTotal usable samples: {len(y_letter)} across {len(set(y_letter))} letters\n")
 
+    # Build dataset for final model fitting
+    rng_main = np.random.RandomState(args.seed)
+    X_final, y_letter_final, y_cluster_final = build_dataset(
+        records, y_letter, augment=args.augment, aug_copies=args.aug_copies, aug_params=aug_params, rng=rng_main
+    )
+    print(f"Training dataset size for final fit: {len(X_final)} samples (features: {X_final.shape[1]}-D)")
+
     print("=== Step 2: Level-1 dispatcher (6-way cluster classifier) ===")
-    scaler80 = StandardScaler().fit(X)
-    X_scaled = scaler80.transform(X)
-    level1_cv = cross_validate(X, y_cluster, (48, 24), 1e-3, args.seed)
+    scaler80 = StandardScaler().fit(X_final)
+    X_scaled = scaler80.transform(X_final)
+    level1_cv = cross_validate(
+        records, y_cluster, (48, 24), 1e-3, args.seed,
+        augment=args.augment, aug_copies=args.aug_copies, aug_params=aug_params
+    )
     print(f"  5-fold CV accuracy: {level1_cv['mean']:.4f}  (per-fold {level1_cv['perFold']})")
     level1_final = make_mlp((48, 24), 1e-3, args.seed)
-    level1_final.fit(X_scaled, y_cluster)
+    level1_final.fit(X_scaled, y_cluster_final)
 
     print("\n=== Step 3: Level-2 sub-classifiers ===")
     level2_final = {}
     level2_cv_report = {}
     scaler_by_cluster = {}
+    records_arr = np.array(records, dtype=object)
     for cid, letters in CLUSTERS.items():
-        mask = y_cluster == cid
+        mask_final = y_cluster_final == cid
         label = "+".join(letters) if cid != 6 else f"main set ({len(letters)} letters)"
+        
+        # Cluster subset of original records for cross-validation
+        mask_records = y_cluster == cid
+        records_cluster = records_arr[mask_records]
+        y_letter_cluster = y_letter[mask_records]
+
         if cid == 6:
-            cv = cross_validate(X[mask], y_letter[mask], (64, 32), 1e-3, args.seed)
-            scaler = StandardScaler().fit(X[mask])
+            cv = cross_validate(
+                records_cluster, y_letter_cluster, (64, 32), 1e-3, args.seed,
+                augment=args.augment, aug_copies=args.aug_copies, aug_params=aug_params
+            )
+            scaler = StandardScaler().fit(X_final[mask_final])
             clf = make_mlp((64, 32), 1e-3, args.seed)
-            clf.fit(scaler.transform(X[mask]), y_letter[mask])
+            clf.fit(scaler.transform(X_final[mask_final]), y_letter_final[mask_final])
         else:
-            sub_X = X[mask][:, LEVEL2_NARROW_INDICES]
-            cv = cross_validate(sub_X, y_letter[mask], (16,), 1e-2, args.seed)
-            scaler = StandardScaler().fit(sub_X)
+            sub_records = []
+            for r in records_cluster:
+                sub_records.append({
+                    "coords": r["coords"],
+                    "velocity": r["velocity"],
+                    "feat84": r["feat84"][LEVEL2_NARROW_INDICES],
+                })
+            # For narrow features, build_dataset can run or we can extract narrow indices
+            # Since narrow features are indices 63:82 of feat84:
+            sub_X_final = X_final[mask_final][:, LEVEL2_NARROW_INDICES]
+            scaler = StandardScaler().fit(sub_X_final)
             clf = make_mlp((16,), 1e-2, args.seed)
-            clf.fit(scaler.transform(sub_X), y_letter[mask])
+            clf.fit(scaler.transform(sub_X_final), y_letter_final[mask_final])
+            # For CV on narrow:
+            cv = cross_validate(
+                records_cluster, y_letter_cluster, (16,), 1e-2, args.seed,
+                augment=args.augment, aug_copies=args.aug_copies, aug_params=aug_params
+            )
         scaler_by_cluster[cid] = scaler
         level2_final[cid] = clf
         level2_cv_report[cid] = cv
@@ -461,7 +640,10 @@ def main():
         print(f"  Cluster {cid} [{label}]: 5-fold CV accuracy = {acc_str}")
 
     print("\n=== Step 4: End-to-end pipeline cross-validation (dispatch -> classify) ===")
-    e2e_cv = end_to_end_cross_validate(X, y_letter, y_cluster, args.seed)
+    e2e_cv = end_to_end_cross_validate(
+        records, y_letter, y_cluster, args.seed,
+        augment=args.augment, aug_copies=args.aug_copies, aug_params=aug_params
+    )
     print(f"  5-fold end-to-end accuracy: {e2e_cv['mean']:.4f}  (per-fold {e2e_cv['perFold']})")
 
     print("\n=== Exporting model ===")
@@ -477,6 +659,11 @@ def main():
         "dynamicLetters": DYNAMIC_LETTERS,
         "featureVectorLength": FULL_VECTOR_LENGTH,
         "featureLayout": FEATURE_LAYOUT,
+        "augmentation": {
+            "enabled": args.augment,
+            "params": aug_params if args.augment else None,
+            "copies": args.aug_copies if args.augment else 0,
+        },
         "provenanceNote": (
             "Two-level MLP dispatcher inspired by Hasanov et al. 2023's clustered-model "
             "concept; exact paper architecture unverified (paywalled). 'K' added to "

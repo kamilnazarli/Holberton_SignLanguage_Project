@@ -82,7 +82,55 @@ class TestStaticPipeline(unittest.TestCase):
         self.assertEqual(res_r["label"], res_l["label"])
         self.assertAlmostEqual(res_r["confidence"], res_l["confidence"], places=4)
 
+    def test_landmark_rotations(self):
+        from scripts.static_model import rotate_landmarks
+        landmarks = np.random.randn(21, 3)
+        landmarks[0] = 0.0  # wrist at origin
+        rng = np.random.RandomState(42)
+        rotated = rotate_landmarks(landmarks, max_angles=(15.0, 15.0, 15.0), rng=rng)
+        self.assertEqual(rotated.shape, (21, 3))
+        np.testing.assert_allclose(rotated[0], [0.0, 0.0, 0.0], atol=1e-12)
+
+    def test_landmark_scaling(self):
+        from scripts.static_model import scale_landmarks
+        landmarks = np.random.randn(21, 3)
+        landmarks[0] = 0.0
+        rng = np.random.RandomState(42)
+        scaled = scale_landmarks(landmarks, scale_range=(0.9, 1.1), rng=rng)
+        self.assertEqual(scaled.shape, (21, 3))
+        np.testing.assert_allclose(scaled[0], [0.0, 0.0, 0.0], atol=1e-12)
+
+    def test_landmark_translation_and_jitter(self):
+        from scripts.static_model import translate_landmarks, jitter_landmarks
+        landmarks = np.random.randn(21, 3)
+        rng = np.random.RandomState(42)
+        trans = translate_landmarks(landmarks, max_translation=0.03, rng=rng)
+        self.assertEqual(trans.shape, (21, 3))
+
+        jit = jitter_landmarks(landmarks, jitter_std=0.01, rng=rng)
+        self.assertEqual(jit.shape, (21, 3))
+
+    def test_augment_landmarks_pipeline(self):
+        from scripts.static_model import augment_landmarks
+        landmarks = np.random.randn(21, 3)
+        landmarks[0] = 0.0
+        rng1 = np.random.RandomState(123)
+        aug1 = augment_landmarks(landmarks, rng=rng1)
+        self.assertEqual(aug1.shape, (21, 3))
+
+        # Test reproducibility with same seed
+        rng2 = np.random.RandomState(123)
+        aug2 = augment_landmarks(landmarks, rng=rng2)
+        np.testing.assert_allclose(aug1, aug2)
+
+        # Ensure valid 84-dimensional feature vector is built from augmented coords
+        feat = build_feature_vector_84(aug1, np.zeros(2))
+        self.assertEqual(len(feat), FULL_VECTOR_LENGTH)
+        self.assertFalse(np.any(np.isnan(feat)))
+        self.assertFalse(np.any(np.isinf(feat)))
+
 
 if __name__ == "__main__":
     unittest.main()
+
 
