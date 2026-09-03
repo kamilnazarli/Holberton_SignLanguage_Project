@@ -1,0 +1,1071 @@
+{
+  "results": [
+    {
+      "target_word": "BAKI",
+      "description": "Pos 0: R(46%) > B(38%) [Greedy fails]",
+      "has_ambiguity": true,
+      "greedy_pred": "RAKI",
+      "greedy_score": -1.083,
+      "greedy_correct": false,
+      "beam_runs": {
+        "3": {
+          "A. Greedy": {
+            "pred": "RAKI",
+            "score": -1.083,
+            "correct": false,
+            "rescued": false
+          },
+          "B. Beam (Acoustic Only)": {
+            "pred": "RAKI",
+            "score": -1.083,
+            "correct": false,
+            "rescued": false
+          },
+          "C. Beam + Bigram LM": {
+            "pred": "BAKI",
+            "score": -8.325,
+            "correct": true,
+            "rescued": true
+          },
+          "D. Beam + Bigram LM + AZ_LEXICON": {
+            "pred": "BAKI",
+            "score": -5.325,
+            "correct": true,
+            "rescued": true
+          }
+        },
+        "5": {
+          "A. Greedy": {
+            "pred": "RAKI",
+            "score": -1.083,
+            "correct": false,
+            "rescued": false
+          },
+          "B. Beam (Acoustic Only)": {
+            "pred": "RAKI",
+            "score": -1.083,
+            "correct": false,
+            "rescued": false
+          },
+          "C. Beam + Bigram LM": {
+            "pred": "BAKI",
+            "score": -8.325,
+            "correct": true,
+            "rescued": true
+          },
+          "D. Beam + Bigram LM + AZ_LEXICON": {
+            "pred": "BAKI",
+            "score": -5.325,
+            "correct": true,
+            "rescued": true
+          }
+        },
+        "10": {
+          "A. Greedy": {
+            "pred": "RAKI",
+            "score": -1.083,
+            "correct": false,
+            "rescued": false
+          },
+          "B. Beam (Acoustic Only)": {
+            "pred": "RAKI",
+            "score": -1.083,
+            "correct": false,
+            "rescued": false
+          },
+          "C. Beam + Bigram LM": {
+            "pred": "BAKI",
+            "score": -8.325,
+            "correct": true,
+            "rescued": true
+          },
+          "D. Beam + Bigram LM + AZ_LEXICON": {
+            "pred": "BAKI",
+            "score": -5.325,
+            "correct": true,
+            "rescued": true
+          }
+        }
+      }
+    },
+    {
+      "target_word": "SALAM",
+      "description": "Pos 3: Ə(48%) > A(39%) [Greedy fails]",
+      "has_ambiguity": true,
+      "greedy_pred": "SALƏM",
+      "greedy_score": -1.147,
+      "greedy_correct": false,
+      "beam_runs": {
+        "3": {
+          "A. Greedy": {
+            "pred": "SALƏM",
+            "score": -1.147,
+            "correct": false,
+            "rescued": false
+          },
+          "B. Beam (Acoustic Only)": {
+            "pred": "SALƏM",
+            "score": -1.147,
+            "correct": false,
+            "rescued": false
+          },
+          "C. Beam + Bigram LM": {
+            "pred": "SALAM",
+            "score": -9.074,
+            "correct": true,
+            "rescued": true
+          },
+          "D. Beam + Bigram LM + AZ_LEXICON": {
+            "pred": "SALAM",
+            "score": -6.074,
+            "correct": true,
+            "rescued": true
+          }
+        },
+        "5": {
+          "A. Greedy": {
+            "pred": "SALƏM",
+            "score": -1.147,
+            "correct": false,
+            "rescued": false
+          },
+          "B. Beam (Acoustic Only)": {
+            "pred": "SALƏM",
+            "score": -1.147,
+            "correct": false,
+            "rescued": false
+          },
+          "C. Beam + Bigram LM": {
+            "pred": "SALAM",
+            "score": -9.074,
+            "correct": true,
+            "rescued": true
+          },
+          "D. Beam + Bigram LM + AZ_LEXICON": {
+            "pred": "SALAM",
+            "score": -6.074,
+            "correct": true,
+            "rescued": true
+          }
+        },
+        "10": {
+          "A. Greedy": {
+            "pred": "SALƏM",
+            "score": -1.147,
+            "correct": false,
+            "rescued": false
+          },
+          "B. Beam (Acoustic Only)": {
+            "pred": "SALƏM",
+            "score": -1.147,
+            "correct": false,
+            "rescued": false
+          },
+          "C. Beam + Bigram LM": {
+            "pred": "SALAM",
+            "score": -9.074,
+            "correct": true,
+            "rescued": true
+          },
+          "D. Beam + Bigram LM + AZ_LEXICON": {
+            "pred": "SALAM",
+            "score": -6.074,
+            "correct": true,
+            "rescued": true
+          }
+        }
+      }
+    },
+    {
+      "target_word": "GÜL",
+      "description": "Pos 0: Ş(49%) > G(39%) [Greedy fails (G vs Ş)]",
+      "has_ambiguity": true,
+      "greedy_pred": "ŞÜL",
+      "greedy_score": -0.917,
+      "greedy_correct": false,
+      "beam_runs": {
+        "3": {
+          "A. Greedy": {
+            "pred": "ŞÜL",
+            "score": -0.917,
+            "correct": false,
+            "rescued": false
+          },
+          "B. Beam (Acoustic Only)": {
+            "pred": "ŞÜL",
+            "score": -0.917,
+            "correct": false,
+            "rescued": false
+          },
+          "C. Beam + Bigram LM": {
+            "pred": "GÜL",
+            "score": -6.289,
+            "correct": true,
+            "rescued": true
+          },
+          "D. Beam + Bigram LM + AZ_LEXICON": {
+            "pred": "GÜL",
+            "score": -3.289,
+            "correct": true,
+            "rescued": true
+          }
+        },
+        "5": {
+          "A. Greedy": {
+            "pred": "ŞÜL",
+            "score": -0.917,
+            "correct": false,
+            "rescued": false
+          },
+          "B. Beam (Acoustic Only)": {
+            "pred": "ŞÜL",
+            "score": -0.917,
+            "correct": false,
+            "rescued": false
+          },
+          "C. Beam + Bigram LM": {
+            "pred": "GÜL",
+            "score": -6.289,
+            "correct": true,
+            "rescued": true
+          },
+          "D. Beam + Bigram LM + AZ_LEXICON": {
+            "pred": "GÜL",
+            "score": -3.289,
+            "correct": true,
+            "rescued": true
+          }
+        },
+        "10": {
+          "A. Greedy": {
+            "pred": "ŞÜL",
+            "score": -0.917,
+            "correct": false,
+            "rescued": false
+          },
+          "B. Beam (Acoustic Only)": {
+            "pred": "ŞÜL",
+            "score": -0.917,
+            "correct": false,
+            "rescued": false
+          },
+          "C. Beam + Bigram LM": {
+            "pred": "GÜL",
+            "score": -6.289,
+            "correct": true,
+            "rescued": true
+          },
+          "D. Beam + Bigram LM + AZ_LEXICON": {
+            "pred": "GÜL",
+            "score": -3.289,
+            "correct": true,
+            "rescued": true
+          }
+        }
+      }
+    },
+    {
+      "target_word": "SƏHƏR",
+      "description": "Pos 3: P(47%) > H(37%) [Greedy fails (H vs P)]",
+      "has_ambiguity": true,
+      "greedy_pred": "SƏHPR",
+      "greedy_score": -1.166,
+      "greedy_correct": false,
+      "beam_runs": {
+        "3": {
+          "A. Greedy": {
+            "pred": "SƏHPR",
+            "score": -1.166,
+            "correct": false,
+            "rescued": false
+          },
+          "B. Beam (Acoustic Only)": {
+            "pred": "SƏHPR",
+            "score": -1.166,
+            "correct": false,
+            "rescued": false
+          },
+          "C. Beam + Bigram LM": {
+            "pred": "SƏHƏR",
+            "score": -8.891,
+            "correct": true,
+            "rescued": true
+          },
+          "D. Beam + Bigram LM + AZ_LEXICON": {
+            "pred": "SƏHƏR",
+            "score": -5.891,
+            "correct": true,
+            "rescued": true
+          }
+        },
+        "5": {
+          "A. Greedy": {
+            "pred": "SƏHPR",
+            "score": -1.166,
+            "correct": false,
+            "rescued": false
+          },
+          "B. Beam (Acoustic Only)": {
+            "pred": "SƏHPR",
+            "score": -1.166,
+            "correct": false,
+            "rescued": false
+          },
+          "C. Beam + Bigram LM": {
+            "pred": "SƏHƏR",
+            "score": -8.891,
+            "correct": true,
+            "rescued": true
+          },
+          "D. Beam + Bigram LM + AZ_LEXICON": {
+            "pred": "SƏHƏR",
+            "score": -5.891,
+            "correct": true,
+            "rescued": true
+          }
+        },
+        "10": {
+          "A. Greedy": {
+            "pred": "SƏHPR",
+            "score": -1.166,
+            "correct": false,
+            "rescued": false
+          },
+          "B. Beam (Acoustic Only)": {
+            "pred": "SƏHPR",
+            "score": -1.166,
+            "correct": false,
+            "rescued": false
+          },
+          "C. Beam + Bigram LM": {
+            "pred": "SƏHƏR",
+            "score": -8.891,
+            "correct": true,
+            "rescued": true
+          },
+          "D. Beam + Bigram LM + AZ_LEXICON": {
+            "pred": "SƏHƏR",
+            "score": -5.891,
+            "correct": true,
+            "rescued": true
+          }
+        }
+      }
+    },
+    {
+      "target_word": "KİTAB",
+      "description": "Pos 0: Ç(45%) > K(38%) [Greedy fails]",
+      "has_ambiguity": true,
+      "greedy_pred": "ÇİTAB",
+      "greedy_score": -1.209,
+      "greedy_correct": false,
+      "beam_runs": {
+        "3": {
+          "A. Greedy": {
+            "pred": "ÇİTAB",
+            "score": -1.209,
+            "correct": false,
+            "rescued": false
+          },
+          "B. Beam (Acoustic Only)": {
+            "pred": "ÇİTAB",
+            "score": -1.209,
+            "correct": false,
+            "rescued": false
+          },
+          "C. Beam + Bigram LM": {
+            "pred": "KİTAB",
+            "score": -8.82,
+            "correct": true,
+            "rescued": true
+          },
+          "D. Beam + Bigram LM + AZ_LEXICON": {
+            "pred": "KİTAB",
+            "score": -5.82,
+            "correct": true,
+            "rescued": true
+          }
+        },
+        "5": {
+          "A. Greedy": {
+            "pred": "ÇİTAB",
+            "score": -1.209,
+            "correct": false,
+            "rescued": false
+          },
+          "B. Beam (Acoustic Only)": {
+            "pred": "ÇİTAB",
+            "score": -1.209,
+            "correct": false,
+            "rescued": false
+          },
+          "C. Beam + Bigram LM": {
+            "pred": "KİTAB",
+            "score": -8.82,
+            "correct": true,
+            "rescued": true
+          },
+          "D. Beam + Bigram LM + AZ_LEXICON": {
+            "pred": "KİTAB",
+            "score": -5.82,
+            "correct": true,
+            "rescued": true
+          }
+        },
+        "10": {
+          "A. Greedy": {
+            "pred": "ÇİTAB",
+            "score": -1.209,
+            "correct": false,
+            "rescued": false
+          },
+          "B. Beam (Acoustic Only)": {
+            "pred": "ÇİTAB",
+            "score": -1.209,
+            "correct": false,
+            "rescued": false
+          },
+          "C. Beam + Bigram LM": {
+            "pred": "KİTAB",
+            "score": -8.82,
+            "correct": true,
+            "rescued": true
+          },
+          "D. Beam + Bigram LM + AZ_LEXICON": {
+            "pred": "KİTAB",
+            "score": -5.82,
+            "correct": true,
+            "rescued": true
+          }
+        }
+      }
+    },
+    {
+      "target_word": "DƏNİZ",
+      "description": "Pos 0: K(45%) > D(38%) [Greedy fails]",
+      "has_ambiguity": true,
+      "greedy_pred": "KƏNİZ",
+      "greedy_score": -1.209,
+      "greedy_correct": false,
+      "beam_runs": {
+        "3": {
+          "A. Greedy": {
+            "pred": "KƏNİZ",
+            "score": -1.209,
+            "correct": false,
+            "rescued": false
+          },
+          "B. Beam (Acoustic Only)": {
+            "pred": "KƏNİZ",
+            "score": -1.209,
+            "correct": false,
+            "rescued": false
+          },
+          "C. Beam + Bigram LM": {
+            "pred": "KƏNİZ",
+            "score": -8.21,
+            "correct": false,
+            "rescued": false
+          },
+          "D. Beam + Bigram LM + AZ_LEXICON": {
+            "pred": "DƏNİZ",
+            "score": -5.706,
+            "correct": true,
+            "rescued": true
+          }
+        },
+        "5": {
+          "A. Greedy": {
+            "pred": "KƏNİZ",
+            "score": -1.209,
+            "correct": false,
+            "rescued": false
+          },
+          "B. Beam (Acoustic Only)": {
+            "pred": "KƏNİZ",
+            "score": -1.209,
+            "correct": false,
+            "rescued": false
+          },
+          "C. Beam + Bigram LM": {
+            "pred": "KƏNİZ",
+            "score": -8.21,
+            "correct": false,
+            "rescued": false
+          },
+          "D. Beam + Bigram LM + AZ_LEXICON": {
+            "pred": "DƏNİZ",
+            "score": -5.706,
+            "correct": true,
+            "rescued": true
+          }
+        },
+        "10": {
+          "A. Greedy": {
+            "pred": "KƏNİZ",
+            "score": -1.209,
+            "correct": false,
+            "rescued": false
+          },
+          "B. Beam (Acoustic Only)": {
+            "pred": "KƏNİZ",
+            "score": -1.209,
+            "correct": false,
+            "rescued": false
+          },
+          "C. Beam + Bigram LM": {
+            "pred": "KƏNİZ",
+            "score": -8.21,
+            "correct": false,
+            "rescued": false
+          },
+          "D. Beam + Bigram LM + AZ_LEXICON": {
+            "pred": "DƏNİZ",
+            "score": -5.706,
+            "correct": true,
+            "rescued": true
+          }
+        }
+      }
+    },
+    {
+      "target_word": "ÇÖRƏK",
+      "description": "Pos 4: T(46%) > K(39%) [Greedy fails]",
+      "has_ambiguity": true,
+      "greedy_pred": "ÇÖRƏT",
+      "greedy_score": -1.189,
+      "greedy_correct": false,
+      "beam_runs": {
+        "3": {
+          "A. Greedy": {
+            "pred": "ÇÖRƏT",
+            "score": -1.189,
+            "correct": false,
+            "rescued": false
+          },
+          "B. Beam (Acoustic Only)": {
+            "pred": "ÇÖRƏT",
+            "score": -1.189,
+            "correct": false,
+            "rescued": false
+          },
+          "C. Beam + Bigram LM": {
+            "pred": "ÇÖRƏK",
+            "score": -8.33,
+            "correct": true,
+            "rescued": true
+          },
+          "D. Beam + Bigram LM + AZ_LEXICON": {
+            "pred": "ÇÖRƏK",
+            "score": -5.33,
+            "correct": true,
+            "rescued": true
+          }
+        },
+        "5": {
+          "A. Greedy": {
+            "pred": "ÇÖRƏT",
+            "score": -1.189,
+            "correct": false,
+            "rescued": false
+          },
+          "B. Beam (Acoustic Only)": {
+            "pred": "ÇÖRƏT",
+            "score": -1.189,
+            "correct": false,
+            "rescued": false
+          },
+          "C. Beam + Bigram LM": {
+            "pred": "ÇÖRƏK",
+            "score": -8.33,
+            "correct": true,
+            "rescued": true
+          },
+          "D. Beam + Bigram LM + AZ_LEXICON": {
+            "pred": "ÇÖRƏK",
+            "score": -5.33,
+            "correct": true,
+            "rescued": true
+          }
+        },
+        "10": {
+          "A. Greedy": {
+            "pred": "ÇÖRƏT",
+            "score": -1.189,
+            "correct": false,
+            "rescued": false
+          },
+          "B. Beam (Acoustic Only)": {
+            "pred": "ÇÖRƏT",
+            "score": -1.189,
+            "correct": false,
+            "rescued": false
+          },
+          "C. Beam + Bigram LM": {
+            "pred": "ÇÖRƏK",
+            "score": -8.33,
+            "correct": true,
+            "rescued": true
+          },
+          "D. Beam + Bigram LM + AZ_LEXICON": {
+            "pred": "ÇÖRƏK",
+            "score": -5.33,
+            "correct": true,
+            "rescued": true
+          }
+        }
+      }
+    },
+    {
+      "target_word": "DOST",
+      "description": "Pos 2: L(48%) > S(39%) [Greedy fails]",
+      "has_ambiguity": true,
+      "greedy_pred": "DOLT",
+      "greedy_score": -1.042,
+      "greedy_correct": false,
+      "beam_runs": {
+        "3": {
+          "A. Greedy": {
+            "pred": "DOLT",
+            "score": -1.042,
+            "correct": false,
+            "rescued": false
+          },
+          "B. Beam (Acoustic Only)": {
+            "pred": "DOLT",
+            "score": -1.042,
+            "correct": false,
+            "rescued": false
+          },
+          "C. Beam + Bigram LM": {
+            "pred": "DOST",
+            "score": -7.34,
+            "correct": true,
+            "rescued": true
+          },
+          "D. Beam + Bigram LM + AZ_LEXICON": {
+            "pred": "DOST",
+            "score": -4.34,
+            "correct": true,
+            "rescued": true
+          }
+        },
+        "5": {
+          "A. Greedy": {
+            "pred": "DOLT",
+            "score": -1.042,
+            "correct": false,
+            "rescued": false
+          },
+          "B. Beam (Acoustic Only)": {
+            "pred": "DOLT",
+            "score": -1.042,
+            "correct": false,
+            "rescued": false
+          },
+          "C. Beam + Bigram LM": {
+            "pred": "DOST",
+            "score": -7.34,
+            "correct": true,
+            "rescued": true
+          },
+          "D. Beam + Bigram LM + AZ_LEXICON": {
+            "pred": "DOST",
+            "score": -4.34,
+            "correct": true,
+            "rescued": true
+          }
+        },
+        "10": {
+          "A. Greedy": {
+            "pred": "DOLT",
+            "score": -1.042,
+            "correct": false,
+            "rescued": false
+          },
+          "B. Beam (Acoustic Only)": {
+            "pred": "DOLT",
+            "score": -1.042,
+            "correct": false,
+            "rescued": false
+          },
+          "C. Beam + Bigram LM": {
+            "pred": "DOST",
+            "score": -7.34,
+            "correct": true,
+            "rescued": true
+          },
+          "D. Beam + Bigram LM + AZ_LEXICON": {
+            "pred": "DOST",
+            "score": -4.34,
+            "correct": true,
+            "rescued": true
+          }
+        }
+      }
+    },
+    {
+      "target_word": "BİZ",
+      "description": "Clean acoustic sequence",
+      "has_ambiguity": false,
+      "greedy_pred": "BİZ",
+      "greedy_score": -0.316,
+      "greedy_correct": true,
+      "beam_runs": {
+        "3": {
+          "A. Greedy": {
+            "pred": "BİZ",
+            "score": -0.316,
+            "correct": true,
+            "rescued": false
+          },
+          "B. Beam (Acoustic Only)": {
+            "pred": "BİZ",
+            "score": -0.316,
+            "correct": true,
+            "rescued": false
+          },
+          "C. Beam + Bigram LM": {
+            "pred": "BİZ",
+            "score": -4.686,
+            "correct": true,
+            "rescued": false
+          },
+          "D. Beam + Bigram LM + AZ_LEXICON": {
+            "pred": "BİZ",
+            "score": -1.686,
+            "correct": true,
+            "rescued": false
+          }
+        },
+        "5": {
+          "A. Greedy": {
+            "pred": "BİZ",
+            "score": -0.316,
+            "correct": true,
+            "rescued": false
+          },
+          "B. Beam (Acoustic Only)": {
+            "pred": "BİZ",
+            "score": -0.316,
+            "correct": true,
+            "rescued": false
+          },
+          "C. Beam + Bigram LM": {
+            "pred": "BİZ",
+            "score": -4.686,
+            "correct": true,
+            "rescued": false
+          },
+          "D. Beam + Bigram LM + AZ_LEXICON": {
+            "pred": "BİZ",
+            "score": -1.686,
+            "correct": true,
+            "rescued": false
+          }
+        },
+        "10": {
+          "A. Greedy": {
+            "pred": "BİZ",
+            "score": -0.316,
+            "correct": true,
+            "rescued": false
+          },
+          "B. Beam (Acoustic Only)": {
+            "pred": "BİZ",
+            "score": -0.316,
+            "correct": true,
+            "rescued": false
+          },
+          "C. Beam + Bigram LM": {
+            "pred": "BİZ",
+            "score": -4.686,
+            "correct": true,
+            "rescued": false
+          },
+          "D. Beam + Bigram LM + AZ_LEXICON": {
+            "pred": "BİZ",
+            "score": -1.686,
+            "correct": true,
+            "rescued": false
+          }
+        }
+      }
+    },
+    {
+      "target_word": "ANA",
+      "description": "Clean acoustic sequence",
+      "has_ambiguity": false,
+      "greedy_pred": "ANA",
+      "greedy_score": -0.316,
+      "greedy_correct": true,
+      "beam_runs": {
+        "3": {
+          "A. Greedy": {
+            "pred": "ANA",
+            "score": -0.316,
+            "correct": true,
+            "rescued": false
+          },
+          "B. Beam (Acoustic Only)": {
+            "pred": "ANA",
+            "score": -0.316,
+            "correct": true,
+            "rescued": false
+          },
+          "C. Beam + Bigram LM": {
+            "pred": "ANA",
+            "score": -4.428,
+            "correct": true,
+            "rescued": false
+          },
+          "D. Beam + Bigram LM + AZ_LEXICON": {
+            "pred": "ANA",
+            "score": -1.428,
+            "correct": true,
+            "rescued": false
+          }
+        },
+        "5": {
+          "A. Greedy": {
+            "pred": "ANA",
+            "score": -0.316,
+            "correct": true,
+            "rescued": false
+          },
+          "B. Beam (Acoustic Only)": {
+            "pred": "ANA",
+            "score": -0.316,
+            "correct": true,
+            "rescued": false
+          },
+          "C. Beam + Bigram LM": {
+            "pred": "ANA",
+            "score": -4.428,
+            "correct": true,
+            "rescued": false
+          },
+          "D. Beam + Bigram LM + AZ_LEXICON": {
+            "pred": "ANA",
+            "score": -1.428,
+            "correct": true,
+            "rescued": false
+          }
+        },
+        "10": {
+          "A. Greedy": {
+            "pred": "ANA",
+            "score": -0.316,
+            "correct": true,
+            "rescued": false
+          },
+          "B. Beam (Acoustic Only)": {
+            "pred": "ANA",
+            "score": -0.316,
+            "correct": true,
+            "rescued": false
+          },
+          "C. Beam + Bigram LM": {
+            "pred": "ANA",
+            "score": -4.428,
+            "correct": true,
+            "rescued": false
+          },
+          "D. Beam + Bigram LM + AZ_LEXICON": {
+            "pred": "ANA",
+            "score": -1.428,
+            "correct": true,
+            "rescued": false
+          }
+        }
+      }
+    },
+    {
+      "target_word": "ALMA",
+      "description": "Clean acoustic sequence",
+      "has_ambiguity": false,
+      "greedy_pred": "ALMA",
+      "greedy_score": -0.421,
+      "greedy_correct": true,
+      "beam_runs": {
+        "3": {
+          "A. Greedy": {
+            "pred": "ALMA",
+            "score": -0.421,
+            "correct": true,
+            "rescued": false
+          },
+          "B. Beam (Acoustic Only)": {
+            "pred": "ALMA",
+            "score": -0.421,
+            "correct": true,
+            "rescued": false
+          },
+          "C. Beam + Bigram LM": {
+            "pred": "ALMA",
+            "score": -5.194,
+            "correct": true,
+            "rescued": false
+          },
+          "D. Beam + Bigram LM + AZ_LEXICON": {
+            "pred": "ALMA",
+            "score": -2.194,
+            "correct": true,
+            "rescued": false
+          }
+        },
+        "5": {
+          "A. Greedy": {
+            "pred": "ALMA",
+            "score": -0.421,
+            "correct": true,
+            "rescued": false
+          },
+          "B. Beam (Acoustic Only)": {
+            "pred": "ALMA",
+            "score": -0.421,
+            "correct": true,
+            "rescued": false
+          },
+          "C. Beam + Bigram LM": {
+            "pred": "ALMA",
+            "score": -5.194,
+            "correct": true,
+            "rescued": false
+          },
+          "D. Beam + Bigram LM + AZ_LEXICON": {
+            "pred": "ALMA",
+            "score": -2.194,
+            "correct": true,
+            "rescued": false
+          }
+        },
+        "10": {
+          "A. Greedy": {
+            "pred": "ALMA",
+            "score": -0.421,
+            "correct": true,
+            "rescued": false
+          },
+          "B. Beam (Acoustic Only)": {
+            "pred": "ALMA",
+            "score": -0.421,
+            "correct": true,
+            "rescued": false
+          },
+          "C. Beam + Bigram LM": {
+            "pred": "ALMA",
+            "score": -5.194,
+            "correct": true,
+            "rescued": false
+          },
+          "D. Beam + Bigram LM + AZ_LEXICON": {
+            "pred": "ALMA",
+            "score": -2.194,
+            "correct": true,
+            "rescued": false
+          }
+        }
+      }
+    },
+    {
+      "target_word": "ŞƏKİ",
+      "description": "Clean acoustic sequence",
+      "has_ambiguity": false,
+      "greedy_pred": "ŞƏKİ",
+      "greedy_score": -0.421,
+      "greedy_correct": true,
+      "beam_runs": {
+        "3": {
+          "A. Greedy": {
+            "pred": "ŞƏKİ",
+            "score": -0.421,
+            "correct": true,
+            "rescued": false
+          },
+          "B. Beam (Acoustic Only)": {
+            "pred": "ŞƏKİ",
+            "score": -0.421,
+            "correct": true,
+            "rescued": false
+          },
+          "C. Beam + Bigram LM": {
+            "pred": "ŞƏKİ",
+            "score": -4.701,
+            "correct": true,
+            "rescued": false
+          },
+          "D. Beam + Bigram LM + AZ_LEXICON": {
+            "pred": "ŞƏKİ",
+            "score": -1.701,
+            "correct": true,
+            "rescued": false
+          }
+        },
+        "5": {
+          "A. Greedy": {
+            "pred": "ŞƏKİ",
+            "score": -0.421,
+            "correct": true,
+            "rescued": false
+          },
+          "B. Beam (Acoustic Only)": {
+            "pred": "ŞƏKİ",
+            "score": -0.421,
+            "correct": true,
+            "rescued": false
+          },
+          "C. Beam + Bigram LM": {
+            "pred": "ŞƏKİ",
+            "score": -4.701,
+            "correct": true,
+            "rescued": false
+          },
+          "D. Beam + Bigram LM + AZ_LEXICON": {
+            "pred": "ŞƏKİ",
+            "score": -1.701,
+            "correct": true,
+            "rescued": false
+          }
+        },
+        "10": {
+          "A. Greedy": {
+            "pred": "ŞƏKİ",
+            "score": -0.421,
+            "correct": true,
+            "rescued": false
+          },
+          "B. Beam (Acoustic Only)": {
+            "pred": "ŞƏKİ",
+            "score": -0.421,
+            "correct": true,
+            "rescued": false
+          },
+          "C. Beam + Bigram LM": {
+            "pred": "ŞƏKİ",
+            "score": -4.701,
+            "correct": true,
+            "rescued": false
+          },
+          "D. Beam + Bigram LM + AZ_LEXICON": {
+            "pred": "ŞƏKİ",
+            "score": -1.701,
+            "correct": true,
+            "rescued": false
+          }
+        }
+      }
+    }
+  ],
+  "beam_widths": [
+    3,
+    5,
+    10
+  ],
+  "configs": [
+    "A. Greedy",
+    "B. Beam (Acoustic Only)",
+    "C. Beam + Bigram LM",
+    "D. Beam + Bigram LM + AZ_LEXICON"
+  ]
+}

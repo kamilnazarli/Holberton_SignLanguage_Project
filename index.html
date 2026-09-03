@@ -366,6 +366,10 @@
             <div id="currentWordChips" class="flex flex-wrap gap-1.5 min-h-[2.25rem] items-center">
               <span class="text-[var(--text-dim)] text-sm font-mono">—</span>
             </div>
+            <div id="beamCandidatesRow" class="hidden mt-2 pt-2 border-t border-[var(--line)]">
+              <p class="font-mono text-[9px] text-teal-400 mb-1 tracking-wider uppercase">Beam Search Hypotheses</p>
+              <div id="beamCandidatesList" class="flex flex-wrap gap-1.5 items-center font-mono text-[11px]"></div>
+            </div>
           </div>
 
           <div class="flex-1 flex flex-col">
@@ -409,6 +413,17 @@
               <p class="font-mono text-[10px] text-[var(--text-dim)] mt-0.5">Simulate gestures — works with zero camera access</p>
             </div>
             <button id="demoToggle" class="switch" role="switch" aria-checked="false" aria-label="Toggle demo auto-type mode"></button>
+          </div>
+
+          <div class="flex items-center justify-between pt-3 border-t border-[var(--line)] mt-3">
+            <div>
+              <div class="flex items-center gap-2">
+                <p class="font-display text-sm font-600">Word Beam Search</p>
+                <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-teal-400/10 text-teal-300 border border-teal-400/20">EXPERIMENTAL</span>
+              </div>
+              <p class="font-mono text-[10px] text-[var(--text-dim)] mt-0.5">Decodes sequences with bigram LM & AZ_LEXICON</p>
+            </div>
+            <button id="beamSearchToggle" class="switch" role="switch" aria-checked="false" aria-label="Toggle Word Beam Search mode"></button>
           </div>
         </div>
 
@@ -716,12 +731,16 @@
         : clusterEntry.featureIndices.map((idx) => full84[idx]);
       const letterCandidates = mlpForward(clusterEntry.model, applyScaler(subInput, clusterEntry.scaler));
 
+      const dist = {};
+      for (let i = 0; i < letterCandidates.length; i++) dist[letterCandidates[i].label] = letterCandidates[i].confidence;
+
       return {
         label: letterCandidates[0].label,
         confidence: letterCandidates[0].confidence,
         candidates: letterCandidates.slice(0, 2),
         cluster: clusterCandidates[0].label,
         mode: 'hard',
+        distribution: dist,
       };
     }
 
@@ -766,6 +785,7 @@
       cluster: clusterCandidates[0].label,
       mode: 'soft',
       evaluatedClusters: k,
+      distribution: letterProbs,
     };
   }
 
@@ -776,6 +796,7 @@
 
     if (letterResult.confidence >= MIN_CONFIDENCE) return letterResult;
     return { label: null, confidence: letterResult.confidence, candidates: [] };
+    return { label: null, confidence: letterResult.confidence, candidates: [], distribution: {} };
   }
 
   // ==========================================================================
@@ -822,6 +843,9 @@
     const btnHistory = $('btnHistory');
     const btnEnableDemoFromOverlay = $('btnEnableDemoFromOverlay');
     const demoToggle = $('demoToggle');
+    const beamSearchToggle = $('beamSearchToggle');
+    const beamCandidatesRow = $('beamCandidatesRow');
+    const beamCandidatesList = $('beamCandidatesList');
 
     const historyOverlay = $('historyOverlay');
     const historyBackdrop = $('historyBackdrop');
@@ -860,6 +884,7 @@
       holdStartTime: null,
       alreadyCommitted: false,
       demoMode: false,
+      beamSearchMode: false,
       lastLabel: undefined,
       isDynamic: false,
     };
@@ -1101,6 +1126,139 @@
       return topLabel;
     }
 
+    // ------------------------------------------------------------------ //
+    // Word-Level Beam Search Decoder + Lexicon Prefix Trie
+    // ------------------------------------------------------------------ //
+    class LexiconTrie {
+      constructor(words) {
+        this.root = {};
+        this.words = new Set();
+        if (words) {
+          for (let i = 0; i < words.length; i++) this.insert(words[i]);
+        }
+      }
+      insert(word) {
+        const w = word.trim().toUpperCase();
+        if (!w) return;
+        this.words.add(w);
+        let curr = this.root;
+        for (let i = 0; i < w.length; i++) {
+          const ch = w[i];
+          if (!curr[ch]) curr[ch] = {};
+          curr = curr[ch];
+        }
+        curr._isWord = true;
+      }
+      isValidPrefix(prefix) {
+        const p = prefix.trim().toUpperCase();
+        let curr = this.root;
+        for (let i = 0; i < p.length; i++) {
+          const ch = p[i];
+          if (!curr[ch]) return false;
+          curr = curr[ch];
+        }
+        return true;
+      }
+      isValidWord(word) {
+        return this.words.has(word.trim().toUpperCase());
+      }
+    }
+
+    class WordBeamSearchDecoder {
+      constructor(options) {
+        this.options = Object.assign({
+          beamWidth: 5,
+          lmWeight: 0.6,
+          lexiconWordBonus: 3.0,
+          strictLexiconPrefix: true,
+        }, options);
+        this.trie = new LexiconTrie(AZ_LEXICON);
+        this.reset();
+      }
+
+      reset() {
+        this.stepObservations = [];
+        this.currentBeam = [{ sequence: '', score: 0.0, acScore: 0.0, lmScore: 0.0 }];
+      }
+
+      addStep(probDict) {
+        this.stepObservations.push(probDict);
+        const B = this.options.beamWidth;
+        const candidates = [];
+
+        const tokens = Object.keys(probDict).map(function (k) { return { label: k, prob: probDict[k] }; });
+        tokens.sort(function (a, b) { return b.prob - a.prob; });
+        const topTokens = tokens.slice(0, 12);
+
+        for (let b = 0; b < this.currentBeam.length; b++) {
+          const hyp = this.currentBeam[b];
+          const prevChar = hyp.sequence.length > 0 ? hyp.sequence[hyp.sequence.length - 1] : null;
+
+          for (let t = 0; t < topTokens.length; t++) {
+            const item = topTokens[t];
+            if (item.prob <= 1e-12) continue;
+
+            const newSeq = hyp.sequence + item.label;
+            const newAcScore = hyp.acScore + Math.log(item.prob);
+            const pLm = bigramProb(prevChar, item.label);
+            const newLmScore = hyp.lmScore + Math.log(Math.max(pLm, 1e-12));
+
+            const isPre = this.trie.isValidPrefix(newSeq);
+            if (this.options.strictLexiconPrefix && !isPre) {
+              continue;
+            }
+
+            const score = newAcScore + (this.options.lmWeight * newLmScore);
+            candidates.push({
+              sequence: newSeq,
+              score: score,
+              acScore: newAcScore,
+              lmScore: newLmScore,
+            });
+          }
+        }
+
+        if (candidates.length === 0) {
+          const bestToken = tokens[0].label;
+          for (let b = 0; b < this.currentBeam.length; b++) {
+            const hyp = this.currentBeam[b];
+            const p = Math.max(tokens[0].prob, 1e-12);
+            candidates.push({
+              sequence: hyp.sequence + bestToken,
+              score: hyp.score + Math.log(p),
+              acScore: hyp.acScore + Math.log(p),
+              lmScore: hyp.lmScore,
+            });
+          }
+        }
+
+        candidates.sort(function (a, b) { return b.score - a.score; });
+        this.currentBeam = candidates.slice(0, B);
+        return this.getHypotheses();
+      }
+
+      getHypotheses() {
+        const self = this;
+        return this.currentBeam.map(function (hyp) {
+          const isWord = self.trie.isValidWord(hyp.sequence);
+          const isPre = self.trie.isValidPrefix(hyp.sequence);
+          const bonus = isWord ? self.options.lexiconWordBonus : 0;
+          return {
+            sequence: hyp.sequence,
+            score: hyp.score + bonus,
+            isWord: isWord,
+            isPrefix: isPre,
+          };
+        }).sort(function (a, b) { return b.score - a.score; });
+      }
+
+      getTopWord() {
+        const hyps = this.getHypotheses();
+        return hyps.length > 0 ? hyps[0].sequence : '';
+      }
+    }
+
+    const wordBeamDecoder = new WordBeamSearchDecoder({ beamWidth: 5, lmWeight: 0.6, lexiconWordBonus: 3.0 });
 
     function clearSentence() {
       const text = getFullText();
@@ -1110,6 +1268,8 @@
       }
       sentence = '';
       currentWord = '';
+      wordBeamDecoder.reset();
+      renderBeamCandidates([]);
       renderSentence();
     }
 
@@ -1371,9 +1531,67 @@
       addLetter(labelMeta(finalLabel).symbol);
       chime();
       flashCommit();
+    function commitGesture(label, candidates, distribution) {
+      if (state.beamSearchMode) {
+        const probDict = {};
+        if (distribution && Object.keys(distribution).length > 0) {
+          Object.assign(probDict, distribution);
+        } else if (candidates && candidates.length > 0) {
+          for (let i = 0; i < candidates.length; i++) {
+            probDict[candidates[i].label] = candidates[i].confidence;
+          }
+        }
+        if (label && !probDict[label]) {
+          probDict[label] = 0.90;
+        }
+        for (let i = 0; i < AZ_ALPHABET.length; i++) {
+          const l = AZ_ALPHABET[i];
+          if (!probDict[l]) probDict[l] = 0.001;
+        }
+
+        const hyps = wordBeamDecoder.addStep(probDict);
+        currentWord = wordBeamDecoder.getTopWord();
+        renderSentence();
+        renderBeamCandidates(hyps);
+        chime();
+        flashCommit();
+      } else {
+        const finalLabel = rescoreWithBigram(label, candidates, currentWord);
+        addLetter(labelMeta(finalLabel).symbol);
+        chime();
+        flashCommit();
+      }
     }
 
     function ingestPrediction(label, confidence, candidates, isDynamic) {
+    function renderBeamCandidates(hyps) {
+      if (!beamCandidatesRow || !beamCandidatesList) return;
+      if (!state.beamSearchMode || !hyps || hyps.length === 0) {
+        beamCandidatesRow.classList.add('hidden');
+        beamCandidatesList.innerHTML = '';
+        return;
+      }
+      beamCandidatesRow.classList.remove('hidden');
+      beamCandidatesList.innerHTML = hyps.slice(0, 3).map(function (h, idx) {
+        const badge = h.isWord ? '<span class="text-emerald-400 font-bold ml-1">✓</span>' : '';
+        const isTop = idx === 0 ? 'border-teal-400/50 bg-teal-500/10 text-teal-200' : 'border-zinc-700 bg-zinc-800/40 text-zinc-400';
+        return '<span class="px-2 py-0.5 rounded border ' + isTop + ' cursor-pointer" onclick="window.commitBeamWord(\'' + escapeHtml(h.sequence) + '\')">#' + (idx + 1) + ' ' + escapeHtml(h.sequence) + badge + ' <span class="text-[9px] opacity-60">(' + h.score.toFixed(1) + ')</span></span>';
+      }).join('');
+    }
+
+    window.commitBeamWord = function (wordToCommit) {
+      const w = wordToCommit || currentWord;
+      if (w.trim().length > 0) {
+        sentence += w.trim() + ' ';
+        currentWord = '';
+        wordBeamDecoder.reset();
+        renderSentence();
+        renderBeamCandidates([]);
+        showToast('Committed word: ' + w.trim());
+      }
+    };
+
+    function ingestPrediction(label, confidence, candidates, isDynamic, distribution) {
       const now = performance.now();
 
       if (label !== null && label === state.lastLabel) {
@@ -1396,6 +1614,7 @@
       if (label !== null && progress >= 1 && !state.alreadyCommitted) {
         state.alreadyCommitted = true;
         commitGesture(label, candidates);
+        commitGesture(label, candidates, distribution);
         if (isDynamic && dynamicPredictor) {
           dynamicPredictor.triggerCooldown();
           resetHoldState();
@@ -1474,6 +1693,21 @@
 
     demoToggle.addEventListener('click', function () { setDemoMode(!state.demoMode); });
 
+    if (beamSearchToggle) {
+      beamSearchToggle.addEventListener('click', function () {
+        state.beamSearchMode = !state.beamSearchMode;
+        beamSearchToggle.classList.toggle('on', state.beamSearchMode);
+        beamSearchToggle.setAttribute('aria-checked', String(state.beamSearchMode));
+        if (!state.beamSearchMode) {
+          renderBeamCandidates([]);
+          showToast('Letter-by-letter mode active');
+        } else {
+          wordBeamDecoder.reset();
+          showToast('Word Beam Search active');
+        }
+      });
+    }
+
     document.addEventListener('keydown', function (e) {
       if (e.repeat) return;
 
@@ -1490,6 +1724,31 @@
         case 'Escape':
           e.preventDefault();
           clearSentence();
+          break;
+        case ' ':
+          if (state.beamSearchMode && currentWord.length > 0) {
+            e.preventDefault();
+            window.commitBeamWord(currentWord);
+          } else if (currentWord.length > 0) {
+            e.preventDefault();
+            sentence += currentWord + ' ';
+            currentWord = '';
+            renderSentence();
+          }
+          break;
+        case 'Backspace':
+          e.preventDefault();
+          if (currentWord.length > 0) {
+            currentWord = currentWord.slice(0, -1);
+            if (currentWord.length === 0 && state.beamSearchMode) {
+              wordBeamDecoder.reset();
+              renderBeamCandidates([]);
+            }
+            renderSentence();
+          } else if (sentence.length > 0) {
+            sentence = sentence.trimEnd().slice(0, -1);
+            renderSentence();
+          }
           break;
         case 's':
         case 'S':
@@ -1716,6 +1975,7 @@
 
                 renderModeStatus(activeMode, debugText);
                 ingestPrediction(finalPrediction.label, finalPrediction.confidence, finalPrediction.candidates, isDynamic);
+                ingestPrediction(finalPrediction.label, finalPrediction.confidence, finalPrediction.candidates, isDynamic, finalPrediction.distribution);
               } else {
                 smoother.reset();
                 motionBuffer.reset();
