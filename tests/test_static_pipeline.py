@@ -129,8 +129,32 @@ class TestStaticPipeline(unittest.TestCase):
         self.assertFalse(np.any(np.isnan(feat)))
         self.assertFalse(np.any(np.isinf(feat)))
 
+    def test_soft_routing_k1_equals_hard_routing(self):
+        landmarks = np.random.randn(21, 3)
+        res_hard = self.model.predict_from_landmarks(landmarks, mode="hard")
+        res_soft_k1 = self.model.predict_from_landmarks(landmarks, mode="soft", top_k=1)
+
+        self.assertEqual(res_hard["label"], res_soft_k1["label"])
+        self.assertEqual(res_hard["cluster"], res_soft_k1["cluster"])
+        self.assertAlmostEqual(res_hard["confidence"], res_soft_k1["confidence"], places=5)
+        self.assertEqual(res_soft_k1["evaluatedClusters"], 1)
+
+    def test_soft_routing_multi_clusters(self):
+        landmarks = np.random.randn(21, 3)
+        res_k2 = self.model.predict_from_landmarks(landmarks, mode="soft", top_k=2)
+        self.assertEqual(res_k2["evaluatedClusters"], 2)
+        self.assertIn("distribution", res_k2)
+        self.assertAlmostEqual(sum(res_k2["distribution"].values()), 1.0, places=5)
+
+        res_k6 = self.model.predict_from_landmarks(landmarks, mode="soft", top_k=6)
+        self.assertEqual(res_k6["evaluatedClusters"], 6)
+        self.assertAlmostEqual(sum(res_k6["distribution"].values()), 1.0, places=5)
+        # With K=6, all 32 alphabet letters must have probability mass
+        self.assertEqual(len(res_k6["distribution"]), 32)
+
 
 if __name__ == "__main__":
     unittest.main()
+
 
 

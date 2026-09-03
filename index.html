@@ -696,20 +696,77 @@
     return candidates;
   }
 
+  // Dispatcher configuration: 'hard' (top-1 only) vs 'soft' (Law of Total Probability)
+  const STATIC_ROUTING_MODE = 'soft'; // 'hard' | 'soft'
+  const STATIC_ROUTING_TOP_K = 2; // 1 (hard) | 2 | 3 | 6 (all)
+
   function classifyHierarchical(coords, velocity) {
     if (!AZSL_MODEL) return { label: null, confidence: 0, candidates: [] };
 
     const full84 = buildFeatureVector84(coords, velocity);
     const clusterCandidates = mlpForward(AZSL_MODEL.level1.model, applyScaler(full84, AZSL_MODEL.level1.scaler));
-    const clusterEntry = AZSL_MODEL.clusters[String(clusterCandidates[0].label)];
-    if (!clusterEntry) return { label: null, confidence: 0, candidates: [] };
 
-    const subInput = clusterEntry.featureIndices.length === full84.length
-      ? full84
-      : clusterEntry.featureIndices.map((idx) => full84[idx]);
-    const letterCandidates = mlpForward(clusterEntry.model, applyScaler(subInput, clusterEntry.scaler));
+    // Hard routing (baseline / K=1)
+    if (STATIC_ROUTING_MODE === 'hard' || STATIC_ROUTING_TOP_K === 1) {
+      const clusterEntry = AZSL_MODEL.clusters[String(clusterCandidates[0].label)];
+      if (!clusterEntry) return { label: null, confidence: 0, candidates: [] };
 
-    return { label: letterCandidates[0].label, confidence: letterCandidates[0].confidence, candidates: letterCandidates.slice(0, 2) };
+      const subInput = clusterEntry.featureIndices.length === full84.length
+        ? full84
+        : clusterEntry.featureIndices.map((idx) => full84[idx]);
+      const letterCandidates = mlpForward(clusterEntry.model, applyScaler(subInput, clusterEntry.scaler));
+
+      return {
+        label: letterCandidates[0].label,
+        confidence: letterCandidates[0].confidence,
+        candidates: letterCandidates.slice(0, 2),
+        cluster: clusterCandidates[0].label,
+        mode: 'hard',
+      };
+    }
+
+    // Soft multi-cluster routing (Law of Total Probability over top-K clusters)
+    const k = Math.max(1, Math.min(STATIC_ROUTING_TOP_K, clusterCandidates.length));
+    const evalClusters = clusterCandidates.slice(0, k);
+    let sumClusterProb = 0;
+    for (let i = 0; i < evalClusters.length; i++) sumClusterProb += evalClusters[i].confidence;
+    if (sumClusterProb < 1e-9) sumClusterProb = 1e-9;
+
+    const letterProbs = {};
+    for (let c = 0; c < evalClusters.length; c++) {
+      const cCand = evalClusters[c];
+      const clusterEntry = AZSL_MODEL.clusters[String(cCand.label)];
+      if (!clusterEntry) continue;
+
+      const subInput = clusterEntry.featureIndices.length === full84.length
+        ? full84
+        : clusterEntry.featureIndices.map((idx) => full84[idx]);
+      const subCandidates = mlpForward(clusterEntry.model, applyScaler(subInput, clusterEntry.scaler));
+
+      for (let s = 0; s < subCandidates.length; s++) {
+        const item = subCandidates[s];
+        const jointProb = (cCand.confidence * item.confidence) / sumClusterProb;
+        letterProbs[item.label] = (letterProbs[item.label] || 0) + jointProb;
+      }
+    }
+
+    const combinedCandidates = Object.keys(letterProbs).map((label) => ({
+      label: label,
+      confidence: letterProbs[label],
+    }));
+    combinedCandidates.sort((a, b) => b.confidence - a.confidence);
+
+    const topLetter = combinedCandidates[0] ? combinedCandidates[0].label : null;
+    const topConfidence = combinedCandidates[0] ? combinedCandidates[0].confidence : 0;
+
+    return {
+      label: topLetter,
+      confidence: topConfidence,
+      candidates: combinedCandidates.slice(0, 2),
+      cluster: clusterCandidates[0].label,
+      mode: 'soft',
+      evaluatedClusters: k,
+    };
   }
 
   function predictGesture(landmarksArray, mirrorX, velocity) {

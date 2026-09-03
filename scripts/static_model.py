@@ -173,9 +173,13 @@ class StaticHierarchicalModel:
         raw_landmarks_xyz: np.ndarray,
         mirror_x: bool = False,
         velocity_xy: Optional[np.ndarray] = None,
+        mode: str = "hard",
+        top_k: int = 2,
     ) -> Dict[str, Any]:
         """
         Runs the two-level classifier on raw 21x3 landmarks.
+        mode: 'hard' (default) or 'soft'.
+        top_k: number of clusters to evaluate in soft mode (1 to 6).
         """
         coords = normalize_landmarks(raw_landmarks_xyz, mirror_x=mirror_x)
         if velocity_xy is None:
@@ -184,19 +188,29 @@ class StaticHierarchicalModel:
             velocity_xy = np.array([-velocity_xy[0], velocity_xy[1]], dtype=np.float64)
 
         full84 = build_feature_vector_84(coords, velocity_xy)
-        return self.predict_from_feature_vector(full84)
+        return self.predict_from_feature_vector(full84, mode=mode, top_k=top_k)
 
-    def predict_from_feature_vector(self, full84: np.ndarray) -> Dict[str, Any]:
+    def predict_from_feature_vector(
+        self,
+        full84: np.ndarray,
+        mode: str = "hard",
+        top_k: int = 2,
+    ) -> Dict[str, Any]:
         """
         Runs Level-1 dispatch and Level-2 sub-classifier on 84-dim vector.
+        Supports both 'hard' routing (top-1 only) and 'soft' multi-cluster routing.
         """
+        if mode == "soft" and top_k > 1:
+            return self.predict_soft(full84, top_k=top_k)
+
+        # Hard routing (baseline / K=1)
         l1_scaled = apply_scaler(full84, self.level1["scaler"])
         cluster_cands = mlp_forward(self.level1["model"], l1_scaled)
         top_cluster = str(cluster_cands[0][0])
 
         cluster_entry = self.clusters.get(top_cluster)
         if cluster_entry is None:
-            return {"label": None, "confidence": 0.0, "cluster": top_cluster, "candidates": []}
+            return {"label": None, "confidence": 0.0, "cluster": int(top_cluster), "candidates": []}
 
         feat_indices = cluster_entry.get("featureIndices", list(range(FULL_VECTOR_LENGTH)))
         if len(feat_indices) == len(full84):
@@ -212,6 +226,53 @@ class StaticHierarchicalModel:
             "confidence": letter_cands[0][1],
             "cluster": int(top_cluster),
             "candidates": letter_cands[:3],
+            "mode": "hard",
+            "evaluatedClusters": 1,
+        }
+
+    def predict_soft(self, full84: np.ndarray, top_k: int = 2) -> Dict[str, Any]:
+        """
+        Soft multi-cluster dispatcher using the Law of Total Probability:
+        P(letter | x) = sum_{c in topK} P(cluster c | x) * P(letter | cluster c, x) / sum_{c in topK} P(c | x)
+        """
+        l1_scaled = apply_scaler(full84, self.level1["scaler"])
+        cluster_cands = mlp_forward(self.level1["model"], l1_scaled)
+
+        # Clamp top_k between 1 and total available clusters
+        k = max(1, min(top_k, len(cluster_cands)))
+        eval_clusters = cluster_cands[:k]
+        sum_cluster_prob = sum(c[1] for c in eval_clusters)
+        if sum_cluster_prob < 1e-9:
+            sum_cluster_prob = 1e-9
+
+        letter_probs = {}
+        for cid_val, c_prob in eval_clusters:
+            cid = str(cid_val)
+            cluster_entry = self.clusters.get(cid)
+            if cluster_entry is None:
+                continue
+
+            feat_indices = cluster_entry.get("featureIndices", list(range(FULL_VECTOR_LENGTH)))
+            sub_input = full84 if len(feat_indices) == len(full84) else full84[feat_indices]
+            l2_scaled = apply_scaler(sub_input, cluster_entry["scaler"])
+            sub_cands = mlp_forward(cluster_entry["model"], l2_scaled)
+
+            for letter, sub_prob in sub_cands:
+                joint_prob = (c_prob * sub_prob) / sum_cluster_prob
+                letter_probs[letter] = letter_probs.get(letter, 0.0) + joint_prob
+
+        sorted_letters = sorted(letter_probs.items(), key=lambda item: item[1], reverse=True)
+        top_letter, top_conf = sorted_letters[0] if sorted_letters else (None, 0.0)
+        top_cluster = cluster_cands[0][0]
+
+        return {
+            "label": top_letter,
+            "confidence": float(top_conf),
+            "cluster": int(top_cluster),
+            "candidates": sorted_letters[:3],
+            "mode": "soft",
+            "evaluatedClusters": k,
+            "distribution": letter_probs,
         }
 
 
