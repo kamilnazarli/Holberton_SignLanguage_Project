@@ -1,0 +1,246 @@
+{
+  "timestamp": "2026-09-05T13:36:04Z",
+  "summary": {
+    "hierarchical_model": "public/models/azsl_hierarchical_model.json",
+    "flat_model": "models/flat_static_model.json",
+    "total_sequences_per_scenario": 150,
+    "iv_sequences_count": 75,
+    "oov_sequences_count": 75,
+    "samples_per_word": 5,
+    "scenario_1_clean": {
+      "iv_metrics": {
+        "hier_greedy": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.0252
+        },
+        "hier_beam": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.4041
+        },
+        "flat_greedy": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.0149
+        },
+        "flat_beam": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.3645
+        }
+      },
+      "oov_metrics": {
+        "hier_greedy": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.0333
+        },
+        "hier_beam": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.6531
+        },
+        "flat_greedy": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.0229
+        },
+        "flat_beam": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.6767
+        }
+      },
+      "overall_metrics": {
+        "hier_greedy": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.0292
+        },
+        "hier_beam": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.5286
+        },
+        "flat_greedy": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.0189
+        },
+        "flat_beam": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.5206
+        }
+      }
+    },
+    "scenario_2_live_variation": {
+      "iv_metrics": {
+        "hier_greedy": {
+          "word_acc": 78.67,
+          "char_acc": 94.48,
+          "wer": 21.33,
+          "cer": 5.52,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.027
+        },
+        "hier_beam": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 16,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.4533
+        },
+        "flat_greedy": {
+          "word_acc": 89.33,
+          "char_acc": 97.24,
+          "wer": 10.67,
+          "cer": 2.76,
+          "rescued_count": 8,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.0167
+        },
+        "flat_beam": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.4255
+        }
+      },
+      "oov_metrics": {
+        "hier_greedy": {
+          "word_acc": 76.0,
+          "char_acc": 95.19,
+          "wer": 24.0,
+          "cer": 4.81,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.0256
+        },
+        "hier_beam": {
+          "word_acc": 76.0,
+          "char_acc": 95.19,
+          "wer": 24.0,
+          "cer": 4.81,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.4854
+        },
+        "flat_greedy": {
+          "word_acc": 77.33,
+          "char_acc": 95.44,
+          "wer": 22.67,
+          "cer": 4.56,
+          "rescued_count": 5,
+          "hurt_count": 4,
+          "avg_latency_ms": 0.0158
+        },
+        "flat_beam": {
+          "word_acc": 78.67,
+          "char_acc": 95.95,
+          "wer": 21.33,
+          "cer": 4.05,
+          "rescued_count": 5,
+          "hurt_count": 3,
+          "avg_latency_ms": 0.4404
+        }
+      },
+      "overall_metrics": {
+        "hier_greedy": {
+          "word_acc": 77.33,
+          "char_acc": 94.89,
+          "wer": 22.67,
+          "cer": 5.11,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.0263
+        },
+        "hier_beam": {
+          "word_acc": 88.0,
+          "char_acc": 97.23,
+          "wer": 12.0,
+          "cer": 2.77,
+          "rescued_count": 16,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.4693
+        },
+        "flat_greedy": {
+          "word_acc": 83.33,
+          "char_acc": 96.2,
+          "wer": 16.67,
+          "cer": 3.8,
+          "rescued_count": 13,
+          "hurt_count": 4,
+          "avg_latency_ms": 0.0163
+        },
+        "flat_beam": {
+          "word_acc": 89.33,
+          "char_acc": 97.66,
+          "wer": 10.67,
+          "cer": 2.34,
+          "rescued_count": 5,
+          "hurt_count": 3,
+          "avg_latency_ms": 0.4329
+        }
+      },
+      "different_predictions_count": 13,
+      "flat_rescued_count": 5,
+      "flat_hurt_count": 3
+    }
+  }
+}

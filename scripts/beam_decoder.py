@@ -155,6 +155,21 @@ class BeamHypothesis:
         return f"Hypothesis('{self.sequence}', score={self.log_score:.3f}{status})"
 
 
+def load_lexicon_corpus(lexicon_path: str = "lexicon.txt") -> List[str]:
+    """Loads and tokenizes words from lexicon.txt for language model training."""
+    import re
+    if not os.path.exists(lexicon_path):
+        return AZ_LEXICON
+
+    with open(lexicon_path, "r", encoding="utf-8", errors="replace") as f:
+        text = f.read()
+
+    raw_words = re.findall(r"[A-Za-zƏəÇçĞğIıİiÖöŞşÜü]+", text)
+    stop = {"da", "də", "nə"}
+    clean_words = [w.upper() for w in raw_words if len(w) > 1 and w.lower() not in stop]
+    return clean_words if clean_words else AZ_LEXICON
+
+
 class BeamSearchDecoder:
     """
     Configurable word-level beam search decoder.
@@ -169,6 +184,7 @@ class BeamSearchDecoder:
         lexicon_mode: str = "soft",  # 'none', 'hard', 'soft'
         strict_lexicon_prefix: Optional[bool] = None,
         lexicon_words: Optional[List[str]] = None,
+        bigram_corpus: Optional[List[str]] = None,
     ):
         self.beam_width = beam_width
         self.lm_weight = lm_weight
@@ -180,7 +196,8 @@ class BeamSearchDecoder:
 
         words = lexicon_words or AZ_LEXICON
         self.trie = LexiconTrie(words)
-        self.lm = BigramLanguageModel(words, alpha=0.3)
+        lm_words = bigram_corpus if bigram_corpus is not None else words
+        self.lm = BigramLanguageModel(lm_words, alpha=0.3)
 
     def decode(
         self,

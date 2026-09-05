@@ -1,0 +1,249 @@
+{
+  "timestamp": "2026-09-03T19:05:04Z",
+  "summary": {
+    "lexicon_corpus_path": "lexicon.txt",
+    "lexicon_total_tokens": 131016,
+    "lexicon_unique_words": 29194,
+    "total_sequences_per_scenario": 150,
+    "iv_sequences_count": 75,
+    "oov_sequences_count": 75,
+    "samples_per_word": 5,
+    "beam_width": 5,
+    "scenario_1_clean": {
+      "iv_metrics": {
+        "A_greedy": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.0201
+        },
+        "B_beam_old_70": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.3841
+        },
+        "C_beam_new_19k": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.3805
+        },
+        "D_beam_new_19k_soft_lex": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.3468
+        }
+      },
+      "oov_metrics": {
+        "A_greedy": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.0207
+        },
+        "B_beam_old_70": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.4575
+        },
+        "C_beam_new_19k": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.4729
+        },
+        "D_beam_new_19k_soft_lex": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.4759
+        }
+      },
+      "overall_metrics": {
+        "A_greedy": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.0204
+        },
+        "B_beam_old_70": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.4208
+        },
+        "C_beam_new_19k": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.4267
+        },
+        "D_beam_new_19k_soft_lex": {
+          "word_acc": 100.0,
+          "char_acc": 100.0,
+          "wer": 0.0,
+          "cer": 0.0,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.4114
+        }
+      }
+    },
+    "scenario_2_live_variation": {
+      "iv_metrics": {
+        "A_greedy": {
+          "word_acc": 78.67,
+          "char_acc": 94.48,
+          "wer": 21.33,
+          "cer": 5.52,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.0233
+        },
+        "B_beam_old_70": {
+          "word_acc": 86.67,
+          "char_acc": 96.55,
+          "wer": 13.33,
+          "cer": 3.45,
+          "rescued_count": 6,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.3948
+        },
+        "C_beam_new_19k": {
+          "word_acc": 81.33,
+          "char_acc": 95.17,
+          "wer": 18.67,
+          "cer": 4.83,
+          "rescued_count": 2,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.3876
+        },
+        "D_beam_new_19k_soft_lex": {
+          "word_acc": 98.67,
+          "char_acc": 99.66,
+          "wer": 1.33,
+          "cer": 0.34,
+          "rescued_count": 15,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.3605
+        }
+      },
+      "oov_metrics": {
+        "A_greedy": {
+          "word_acc": 76.0,
+          "char_acc": 95.19,
+          "wer": 24.0,
+          "cer": 4.81,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.0234
+        },
+        "B_beam_old_70": {
+          "word_acc": 76.0,
+          "char_acc": 95.19,
+          "wer": 24.0,
+          "cer": 4.81,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.4863
+        },
+        "C_beam_new_19k": {
+          "word_acc": 74.67,
+          "char_acc": 95.19,
+          "wer": 25.33,
+          "cer": 4.81,
+          "rescued_count": 1,
+          "hurt_count": 2,
+          "avg_latency_ms": 0.4449
+        },
+        "D_beam_new_19k_soft_lex": {
+          "word_acc": 74.67,
+          "char_acc": 95.19,
+          "wer": 25.33,
+          "cer": 4.81,
+          "rescued_count": 1,
+          "hurt_count": 2,
+          "avg_latency_ms": 0.4335
+        }
+      },
+      "overall_metrics": {
+        "A_greedy": {
+          "word_acc": 77.33,
+          "char_acc": 94.89,
+          "wer": 22.67,
+          "cer": 5.11,
+          "rescued_count": 0,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.0234
+        },
+        "B_beam_old_70": {
+          "word_acc": 81.33,
+          "char_acc": 95.77,
+          "wer": 18.67,
+          "cer": 4.23,
+          "rescued_count": 6,
+          "hurt_count": 0,
+          "avg_latency_ms": 0.4405
+        },
+        "C_beam_new_19k": {
+          "word_acc": 78.0,
+          "char_acc": 95.18,
+          "wer": 22.0,
+          "cer": 4.82,
+          "rescued_count": 3,
+          "hurt_count": 2,
+          "avg_latency_ms": 0.4163
+        },
+        "D_beam_new_19k_soft_lex": {
+          "word_acc": 86.67,
+          "char_acc": 97.08,
+          "wer": 13.33,
+          "cer": 2.92,
+          "rescued_count": 16,
+          "hurt_count": 2,
+          "avg_latency_ms": 0.397
+        }
+      },
+      "changed_sequences_count": 8,
+      "improved_sequences_count": 1,
+      "degraded_sequences_count": 6,
+      "oov_degraded_count": 2
+    }
+  }
+}

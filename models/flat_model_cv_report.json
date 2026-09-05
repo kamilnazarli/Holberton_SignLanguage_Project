@@ -1,0 +1,304 @@
+{
+  "timestamp": "2026-09-05T13:33:12Z",
+  "hierarchical_hard": {
+    "mean_accuracy": 90.66,
+    "macro_f1": 84.26,
+    "per_fold": [
+      90.67,
+      90.5,
+      90.83,
+      90.48,
+      90.83
+    ]
+  },
+  "hierarchical_soft": {
+    "mean_accuracy": 90.7,
+    "macro_f1": 84.26,
+    "per_fold": [
+      90.67,
+      90.5,
+      91.0,
+      90.48,
+      90.83
+    ]
+  },
+  "flat_32_class": {
+    "mean_accuracy": 91.67,
+    "macro_f1": 86.02,
+    "per_fold": [
+      90.67,
+      91.36,
+      91.7,
+      91.52,
+      93.08
+    ]
+  },
+  "per_class": {
+    "A": {
+      "samples": 37,
+      "hier_hard_acc": 97.3,
+      "hier_soft_acc": 97.3,
+      "flat_acc": 97.3,
+      "diff_vs_hier_soft": 0.0
+    },
+    "B": {
+      "samples": 36,
+      "hier_hard_acc": 72.22,
+      "hier_soft_acc": 72.22,
+      "flat_acc": 80.56,
+      "diff_vs_hier_soft": 8.33
+    },
+    "C": {
+      "samples": 38,
+      "hier_hard_acc": 39.47,
+      "hier_soft_acc": 39.47,
+      "flat_acc": 50.0,
+      "diff_vs_hier_soft": 10.53
+    },
+    "D": {
+      "samples": 250,
+      "hier_hard_acc": 98.4,
+      "hier_soft_acc": 98.4,
+      "flat_acc": 98.8,
+      "diff_vs_hier_soft": 0.4
+    },
+    "E": {
+      "samples": 38,
+      "hier_hard_acc": 65.79,
+      "hier_soft_acc": 65.79,
+      "flat_acc": 73.68,
+      "diff_vs_hier_soft": 7.89
+    },
+    "F": {
+      "samples": 35,
+      "hier_hard_acc": 82.86,
+      "hier_soft_acc": 82.86,
+      "flat_acc": 80.0,
+      "diff_vs_hier_soft": -2.86
+    },
+    "G": {
+      "samples": 250,
+      "hier_hard_acc": 96.0,
+      "hier_soft_acc": 96.0,
+      "flat_acc": 96.8,
+      "diff_vs_hier_soft": 0.8
+    },
+    "H": {
+      "samples": 37,
+      "hier_hard_acc": 83.78,
+      "hier_soft_acc": 83.78,
+      "flat_acc": 81.08,
+      "diff_vs_hier_soft": -2.7
+    },
+    "I": {
+      "samples": 39,
+      "hier_hard_acc": 94.87,
+      "hier_soft_acc": 94.87,
+      "flat_acc": 94.87,
+      "diff_vs_hier_soft": 0.0
+    },
+    "J": {
+      "samples": 38,
+      "hier_hard_acc": 76.32,
+      "hier_soft_acc": 76.32,
+      "flat_acc": 68.42,
+      "diff_vs_hier_soft": -7.89
+    },
+    "K": {
+      "samples": 250,
+      "hier_hard_acc": 94.4,
+      "hier_soft_acc": 94.4,
+      "flat_acc": 94.8,
+      "diff_vs_hier_soft": 0.4
+    },
+    "L": {
+      "samples": 38,
+      "hier_hard_acc": 71.05,
+      "hier_soft_acc": 71.05,
+      "flat_acc": 73.68,
+      "diff_vs_hier_soft": 2.63
+    },
+    "M": {
+      "samples": 34,
+      "hier_hard_acc": 79.41,
+      "hier_soft_acc": 79.41,
+      "flat_acc": 79.41,
+      "diff_vs_hier_soft": 0.0
+    },
+    "N": {
+      "samples": 40,
+      "hier_hard_acc": 92.5,
+      "hier_soft_acc": 92.5,
+      "flat_acc": 90.0,
+      "diff_vs_hier_soft": -2.5
+    },
+    "O": {
+      "samples": 40,
+      "hier_hard_acc": 65.0,
+      "hier_soft_acc": 65.0,
+      "flat_acc": 82.5,
+      "diff_vs_hier_soft": 17.5
+    },
+    "P": {
+      "samples": 35,
+      "hier_hard_acc": 57.14,
+      "hier_soft_acc": 57.14,
+      "flat_acc": 62.86,
+      "diff_vs_hier_soft": 5.71
+    },
+    "Q": {
+      "samples": 37,
+      "hier_hard_acc": 89.19,
+      "hier_soft_acc": 89.19,
+      "flat_acc": 89.19,
+      "diff_vs_hier_soft": 0.0
+    },
+    "R": {
+      "samples": 39,
+      "hier_hard_acc": 87.18,
+      "hier_soft_acc": 87.18,
+      "flat_acc": 89.74,
+      "diff_vs_hier_soft": 2.56
+    },
+    "S": {
+      "samples": 36,
+      "hier_hard_acc": 83.33,
+      "hier_soft_acc": 83.33,
+      "flat_acc": 86.11,
+      "diff_vs_hier_soft": 2.78
+    },
+    "T": {
+      "samples": 39,
+      "hier_hard_acc": 79.49,
+      "hier_soft_acc": 79.49,
+      "flat_acc": 84.62,
+      "diff_vs_hier_soft": 5.13
+    },
+    "U": {
+      "samples": 37,
+      "hier_hard_acc": 75.68,
+      "hier_soft_acc": 75.68,
+      "flat_acc": 72.97,
+      "diff_vs_hier_soft": -2.7
+    },
+    "V": {
+      "samples": 38,
+      "hier_hard_acc": 89.47,
+      "hier_soft_acc": 89.47,
+      "flat_acc": 92.11,
+      "diff_vs_hier_soft": 2.63
+    },
+    "X": {
+      "samples": 33,
+      "hier_hard_acc": 90.91,
+      "hier_soft_acc": 90.91,
+      "flat_acc": 90.91,
+      "diff_vs_hier_soft": 0.0
+    },
+    "Y": {
+      "samples": 250,
+      "hier_hard_acc": 88.0,
+      "hier_soft_acc": 88.4,
+      "flat_acc": 88.8,
+      "diff_vs_hier_soft": 0.4
+    },
+    "Z": {
+      "samples": 250,
+      "hier_hard_acc": 95.2,
+      "hier_soft_acc": 95.2,
+      "flat_acc": 95.6,
+      "diff_vs_hier_soft": 0.4
+    },
+    "Ç": {
+      "samples": 250,
+      "hier_hard_acc": 97.6,
+      "hier_soft_acc": 97.6,
+      "flat_acc": 97.6,
+      "diff_vs_hier_soft": 0.0
+    },
+    "Ö": {
+      "samples": 250,
+      "hier_hard_acc": 97.6,
+      "hier_soft_acc": 97.6,
+      "flat_acc": 98.8,
+      "diff_vs_hier_soft": 1.2
+    },
+    "Ü": {
+      "samples": 250,
+      "hier_hard_acc": 96.8,
+      "hier_soft_acc": 96.8,
+      "flat_acc": 98.4,
+      "diff_vs_hier_soft": 1.6
+    },
+    "Ğ": {
+      "samples": 34,
+      "hier_hard_acc": 73.53,
+      "hier_soft_acc": 73.53,
+      "flat_acc": 70.59,
+      "diff_vs_hier_soft": -2.94
+    },
+    "İ": {
+      "samples": 40,
+      "hier_hard_acc": 87.5,
+      "hier_soft_acc": 87.5,
+      "flat_acc": 90.0,
+      "diff_vs_hier_soft": 2.5
+    },
+    "Ş": {
+      "samples": 37,
+      "hier_hard_acc": 91.89,
+      "hier_soft_acc": 91.89,
+      "flat_acc": 89.19,
+      "diff_vs_hier_soft": -2.7
+    },
+    "Ə": {
+      "samples": 37,
+      "hier_hard_acc": 89.19,
+      "hier_soft_acc": 89.19,
+      "flat_acc": 83.78,
+      "diff_vs_hier_soft": -5.41
+    }
+  },
+  "critical_confusion_pairs": {
+    "H <-> P": {
+      "hier_soft_errors": 2,
+      "flat_errors": 7,
+      "reduction": -5
+    },
+    "G <-> S": {
+      "hier_soft_errors": 1,
+      "flat_errors": 2,
+      "reduction": -1
+    },
+    "G <-> Ş": {
+      "hier_soft_errors": 1,
+      "flat_errors": 0,
+      "reduction": 1
+    },
+    "B <-> R": {
+      "hier_soft_errors": 0,
+      "flat_errors": 0,
+      "reduction": 0
+    },
+    "C <-> K": {
+      "hier_soft_errors": 1,
+      "flat_errors": 1,
+      "reduction": 0
+    },
+    "A <-> Ə": {
+      "hier_soft_errors": 0,
+      "flat_errors": 0,
+      "reduction": 0
+    },
+    "J <-> Ç": {
+      "hier_soft_errors": 2,
+      "flat_errors": 0,
+      "reduction": 2
+    },
+    "J <-> F": {
+      "hier_soft_errors": 2,
+      "flat_errors": 4,
+      "reduction": -2
+    }
+  }
+}
